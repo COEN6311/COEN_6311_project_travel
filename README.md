@@ -6,9 +6,16 @@ you need to update the dependencies
 pip freeze > requirements.txt
 
 4.sql 
-The MySQL database on the cloud server is ready, with the account and password already provided. 
+The MySQL database on the cloud server is ready, 
+with the account and password already provided in settings.py. 
 You can directly connect using a MySQL client.
 
 5.python manage.py runserver 
+
+6.after modify model
+python manage.py makemigrations
+python manage.py migrate
+
+
 
 
