@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'user',
+    'order',
+    'product',
 ]
 
 MIDDLEWARE = [
@@ -74,9 +77,18 @@ WSGI_APPLICATION = 'COEN_6311_project_travel.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': BASE_DIR / 'db.sqlite3',
+    # }
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',  #
+        'HOST': '1.94.67.157',
+        'PORT': '3306',
+        'NAME': 'coen6311',
+        'USER': 'root',
+        'PASSWORD': 'coen6311',
+        'OPTIONS': {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'", },
     }
 }
 
