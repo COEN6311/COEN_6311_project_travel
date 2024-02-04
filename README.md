@@ -23,5 +23,7 @@ source venv/bin/activate  or .\venv\Scripts\activate
 deactivate
 
 
+sudo fuser -k 8000/tcp
+
 
 
