@@ -1,4 +1,5 @@
 1.create a venv environment and ensure that the project runs under the venv environment.
+.\.venv\Scripts\activate
 2.pip install -r requirements.txt  
 
 3.If you've added or changed the project dependencies, 
