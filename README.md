@@ -18,6 +18,10 @@ You can directly connect using a MySQL client.
 python manage.py makemigrations
 python manage.py migrate
 
+/usr/local/bin/python3.12 -m venv venv
+source venv/bin/activate  or .\venv\Scripts\activate
+deactivate
+
 
 
 
