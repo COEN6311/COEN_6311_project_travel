@@ -18,9 +18,10 @@ Create a virtual environment to isolate project dependencies:
 - For Windows:
   ```cmd
   /usr/local/bin/python3.12 -m venv .venv
-  .\.venv\Scripts\activate
   ```
-
+    ```bash
+      .\.venv\Scripts\activate
+    ```
 ### Deactivating the Virtual Environment
 
 To deactivate the virtual environment, simply run:
