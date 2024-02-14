@@ -1,0 +1,4 @@
+.idea/
+.venv/
+*.pyc
+.idea/workspace.xml
