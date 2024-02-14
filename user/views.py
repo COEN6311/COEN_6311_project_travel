@@ -69,6 +69,7 @@ def register_handle(request):
 
     if result:
         # Redirect the user to homepage with login status after successful registration
+        return Response({'result': result, 'message': 'Registration successful!'})
         return HttpResponseRedirect(reverse('homepage'))
     else:
         return Response({'result': result, 'errorMsg': errorMsg})
@@ -115,3 +116,17 @@ from django.contrib.auth import logout
 def user_logout(request):
     logout(request)
     return Response({'message': 'You have been logged out successfully.'})
+
+
+from django.shortcuts import get_object_or_404
+@api_view(['POST'])
+def deactivate_account(request):
+    '''Deactivate user account'''
+    user_id = request.data.get('user_id')
+    if user_id:
+        user = get_object_or_404(User, id=user_id)
+        user.is_active = False
+        user.save()
+        return Response({'message': 'User account deactivated successfully'})
+    else:
+        return Response({'error': 'User ID not provided'}, status=400)

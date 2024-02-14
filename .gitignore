@@ -1,5 +1,4 @@
 .idea/
 .venv/
-*.pycgit rm -r --cached .idea
-
+*.pyc
 .idea/workspace.xml
