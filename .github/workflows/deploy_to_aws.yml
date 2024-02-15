@@ -1,0 +1,27 @@
+name: Deploy Django to AWS EC2
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup SSH and Deploy
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.AWS_SSH_KEY }}
+        script: |
+          cd /usr/COEN_6311_project_travel
+          git pull
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python manage.py migrate
+          python manage.py collectstatic --noinput
+          nohup python manage.py runserver 0.0.0.0:8000 &
+        
