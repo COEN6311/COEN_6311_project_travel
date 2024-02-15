@@ -21,7 +21,6 @@ def is_strong_password(password):
     )
 
 
-from django.http import HttpResponseRedirect
 @api_view(['POST'])
 def register_handle(request):
     '''Process user registration'''
@@ -69,10 +68,9 @@ def register_handle(request):
 
     if result:
         # Redirect the user to homepage with login status after successful registration
-        return Response({'result': result, 'message': 'Registration successful!'})
-        return HttpResponseRedirect(reverse('homepage'))
+        return Response({'result': result, 'message': 'Registration successful!'}, status=201)
     else:
-        return Response({'result': result, 'errorMsg': errorMsg})
+        return Response({'result': result, 'errorMsg': errorMsg}, status=400)
 
 '''Enable user login'''
 from django.contrib.auth import authenticate, login
@@ -102,8 +100,8 @@ def user_login(request):
             # Redirect to the previously browsed page
             return Response({'token': token.key, 'redirect_to': previous_page})
         else:
-            # If no previous page,redirect to default page,eg:dashboard
-            return Response({'token': token.key, 'redirect_to': reverse('user_dashboard')})
+            # If no previous page,redirect to default page,eg:homepage
+            return Response({'token': token.key, 'redirect_to': reverse('homepage')})
     else:
         # login failed
         return Response({'error': 'Username or password incorrect'}, status=400)
@@ -115,18 +113,19 @@ from django.contrib.auth import logout
 @api_view(['POST'])
 def user_logout(request):
     logout(request)
-    return Response({'message': 'You have been logged out successfully.'})
+    return Response({'message': 'You have been logged out successfully.', 'redirect_to': 'homepage'})
 
-
-from django.shortcuts import get_object_or_404
 @api_view(['POST'])
 def deactivate_account(request):
     '''Deactivate user account'''
-    user_id = request.data.get('user_id')
-    if user_id:
-        user = get_object_or_404(User, id=user_id)
-        user.is_active = False
-        user.save()
-        return Response({'message': 'User account deactivated successfully'})
+    username = request.data.get('username')
+    if username:
+        try:
+            user = User.objects.get(username=username)
+            user.is_active = False
+            user.save()
+            return Response({'message': 'User account deactivated successfully'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found with the provided username'}, status=404)
     else:
-        return Response({'error': 'User ID not provided'}, status=400)
+        return Response({'error': 'Username not provided'}, status=400)

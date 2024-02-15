@@ -1,7 +1,11 @@
 from django.db import models
 from db.base_model import BaseModel
 from utils.get_hash import get_hash
+from django.contrib import admin
+from .models import User
 
+
+admin.site.register(User)
 
 
 class UserManager(models.Manager):
@@ -18,15 +22,11 @@ class UserManager(models.Manager):
         return user
 
 class User(BaseModel):
-    '''用户模型类'''
     username = models.CharField(max_length=20, unique=True, verbose_name='username')
     password = models.CharField(max_length=100, verbose_name='password')
     email = models.EmailField(verbose_name='user_email')
     is_active = models.BooleanField(default=False, verbose_name='active_status')
-
     is_agent = models.BooleanField(default=False, verbose_name='is_agent_status')
-    is_customer = models.BooleanField(default=False, verbose_name='is_customer_status')
-
 
     objects = UserManager()
 
