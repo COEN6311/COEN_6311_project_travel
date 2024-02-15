@@ -2,10 +2,8 @@ from django.db import models
 from db.base_model import BaseModel
 from utils.get_hash import get_hash
 from django.contrib import admin
-from .models import User
 
 
-admin.site.register(User)
 
 
 class UserManager(models.Manager):
@@ -32,3 +30,5 @@ class User(BaseModel):
 
     class Meta:
         db_table = 's_user_account'
+
+# admin.site.register(User)
