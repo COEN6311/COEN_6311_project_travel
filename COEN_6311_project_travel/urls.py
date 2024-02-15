@@ -21,4 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     #下列有更改
     path('user/', include(('user.urls', 'user'), namespace='user')),
+
+    path('product/', include(('product.urls', 'product'), namespace='product')),
 ]
