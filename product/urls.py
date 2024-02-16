@@ -8,5 +8,5 @@ from .views import CustomAPIView
 urlpatterns = [
     path('item/<str:action>', CustomAPIView.as_view(), name='custom_api'),
     path('item/', CustomAPIView.as_view(), name='custom_api'),
-
+    path('package/insert/', views.add_package, name='add_package'),
 ]
