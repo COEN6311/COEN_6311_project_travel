@@ -3,7 +3,6 @@ from django.db import models
 
 class BaseModelManager(models.Manager):
     def get_queryset(self):
-        """重写默认查询集，排除标记为删除的记录"""
         return super().get_queryset().filter(is_delete=False)
 
 class BaseModel(models.Model):

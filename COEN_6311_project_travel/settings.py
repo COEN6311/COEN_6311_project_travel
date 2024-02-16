@@ -43,6 +43,9 @@ INSTALLED_APPS = [
     'user',
     'order',
     'product',
+    'rest_framework.authtoken',
+    'rest_framework',
+
 ]
 
 MIDDLEWARE = [
@@ -145,4 +148,17 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = 'coen6311_travel@163.com'
 EMAIL_HOST_PASSWORD = 'APYDOSTDPDUOEEHQ'
 
+AUTH_USER_MODEL = 'user.User'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    )
+}
 

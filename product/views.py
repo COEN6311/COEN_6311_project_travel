@@ -1,8 +1,12 @@
 from django.shortcuts import render
 
 from django.http import JsonResponse
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
+
+from user.customPermission import IsAgentPermission
 from .models import FlightTicket, Hotel
 from .serializers import FlightTicketSerializer, HotelSerializer
 from rest_framework.response import Response
@@ -15,6 +19,15 @@ class CustomPagination(PageNumberPagination):
 
 
 class CustomAPIView(APIView, PageNumberPagination):
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.request.method == 'GET':
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = [IsAgentPermission]
+        return [permission() for permission in permission_classes]
 
     def post(self, request, *args, **kwargs):
         action = kwargs.get('action')
@@ -26,7 +39,7 @@ class CustomAPIView(APIView, PageNumberPagination):
         if action == 'insert':
             serializer = serializer_class(data=request.data)
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(owner=request.user)
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=400)
 
@@ -58,12 +71,11 @@ class CustomAPIView(APIView, PageNumberPagination):
             if obj:
                 serializer = serializer_class(obj, data=request.data, partial=True)
                 if serializer.is_valid():
-                    serializer.save()
+                    serializer.save(owner=request.user)
                     return Response(serializer.data)
                 return Response(serializer.errors, status=400)
             else:
                 return Response({'result': False, 'errorMsg': 'this id does not exist'}, status=404)
-
 
     def get(self, request, *args, **kwargs):
         type_param = request.query_params.get('type')
@@ -103,4 +115,3 @@ class CustomAPIView(APIView, PageNumberPagination):
             return Hotel, HotelSerializer
         else:
             return None, None
-

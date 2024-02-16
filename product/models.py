@@ -9,7 +9,7 @@ class Item(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE,blank=True, null=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -21,6 +21,7 @@ class FlightTicket(Item):
     # arrival_time = models.DateTimeField()
     origin = models.CharField(max_length=100)
     destination = models.CharField(max_length=100)
+
 
 class Hotel(Item):
     location = models.CharField(max_length=255)

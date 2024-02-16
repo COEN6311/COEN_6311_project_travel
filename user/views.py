@@ -1,8 +1,10 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from user.models import User
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.contrib.auth import logout
 from django.shortcuts import reverse
 
 
@@ -22,6 +24,7 @@ def is_strong_password(password):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def register_handle(request):
     '''Process user registration'''
     username = request.data.get('username')
@@ -55,10 +58,10 @@ def register_handle(request):
                     errorMsg = 'The email already exists!'
                 else:
                     '''If everything above is fine, do registration and login'''
-                    User.objects.create(username=username, password=password, email=email)
+                    User.objects.create_user(username=username, password=password, email=email)
                     user = authenticate(request, username=username, password=password)
                     if user is not None:
-                        login(request, user)
+                        return login(request, user)
                     result = True
         except ValidationError:
             errorMsg = 'The email format is invalid！'
@@ -83,6 +86,7 @@ def some_view(request):
     return HttpResponse("This is some view.")
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def user_login(request):
     username = request.data.get('username')
     password = request.data.get('password')
@@ -90,8 +94,8 @@ def user_login(request):
     # Verify the username and password
     user = authenticate(request, username=username, password=password)
     if user is not None:
-        # if login action succeed, then create or retrieve the user's token
         token, _ = Token.objects.get_or_create(user=user)
+        # if login action succeed, then create or retrieve the user's token
         login(request, user)  # Record the user's login status
 
         # Retrieve the previously browsed page, assuming the browsing history is saved in the user's session
@@ -101,17 +105,17 @@ def user_login(request):
             return Response({'token': token.key, 'redirect_to': previous_page})
         else:
             # If no previous page,redirect to default page,eg:homepage
-            return Response({'token': token.key, 'redirect_to': reverse('homepage')})
+            return Response({'token': token.key})
+            # return Response({'token': token.key, 'redirect_to': reverse('homepage')})
     else:
         # login failed
         return Response({'error': 'Username or password incorrect'}, status=400)
 
 
 
-from django.contrib.auth import logout
-'''enable user logout'''
 @api_view(['POST'])
 def user_logout(request):
+    request.user.auth_token.delete()
     logout(request)
     return Response({'message': 'You have been logged out successfully.', 'redirect_to': 'homepage'})
 
