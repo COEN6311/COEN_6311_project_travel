@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'user',
     'order',
     'product',
+    'uploadapp',
     'rest_framework.authtoken',
     'rest_framework',
 
@@ -162,3 +163,5 @@ REST_FRAMEWORK = {
     )
 }
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
