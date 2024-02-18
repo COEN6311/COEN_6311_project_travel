@@ -28,6 +28,7 @@ class FlightTicket(Item):
     flight_number = models.CharField(max_length=100)
     origin = models.CharField(max_length=100)
     destination = models.CharField(max_length=100)
+    departure_time = models.TimeField(verbose_name='departure_time', blank=True, null=True)
 
 
 class Hotel(Item):

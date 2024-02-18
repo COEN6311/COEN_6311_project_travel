@@ -145,7 +145,7 @@ class CustomAPIView(APIView):
             return paginator.get_paginated_response(serialized_data)
 
 
-# Function to add a package
+@api_view(['POST'])
 def add_package(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -209,12 +209,12 @@ def add_package(request):
         return JsonResponse({"status": "error", "message": "Unexpected error occurred."})
 
 
-@require_http_methods(["POST"])
-def update_package(request, package_id):
-    pagination_class = CustomPagination
+@api_view(["POST"])
+def update_package(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
         name = data.get('name')
+        package_id = data.get('id')
         description = data.get('description')
         price = data.get('price')
         items_data = data.get('items', [])  # 包含项目更新信息
@@ -271,13 +271,13 @@ def update_package(request, package_id):
         return JsonResponse({"status": "error", "message": str(e)})
 
 
-
 @api_view(['GET'])
-def view_packages(request, package_id=None):
+def view_packages(request):
     pagination_class = CustomPagination()
-    if package_id:
+    id = request.query_params.get('id')
+    if id:
         try:
-            custom_package = CustomPackage.objects.get(id=package_id)
+            custom_package = CustomPackage.objects.get(id=id)
             serializer = CustomPackageSerializer(custom_package)
             return Response({"status": "success", "package": serializer.data})
         except CustomPackage.DoesNotExist:
