@@ -3,6 +3,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from db.base_model import BaseModel
 from user.models import User
+from django.db import models
+
+from utils.times import default_start_date, default_end_date
 
 
 class Item(BaseModel):
@@ -11,6 +14,11 @@ class Item(BaseModel):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     image_url = models.URLField(max_length=1024, blank=True, null=True)
+    start_date = models.DateField(default=default_start_date, blank=True, null=True)
+    end_date = models.DateField(default=default_end_date, blank=True, null=True)
+
+    # todo handle order system's date
+    # todo feature
 
     class Meta:
         abstract = True
@@ -18,24 +26,24 @@ class Item(BaseModel):
 
 class FlightTicket(Item):
     flight_number = models.CharField(max_length=100)
-    departure_time = models.DateTimeField()
-    # arrival_time = models.DateTimeField()
     origin = models.CharField(max_length=100)
     destination = models.CharField(max_length=100)
 
 
 class Hotel(Item):
     location = models.CharField(max_length=255)
-    check_in = models.DateField()
-    check_out = models.DateField()
-    room_type = models.CharField(max_length=100)
+    # room_type = models.CharField(max_length=100)
 
 
-class CustomPackage(BaseModel):
+class Activity(Item):
+    location = models.CharField(max_length=255)
+
+
+class CustomPackage(Item):
     name = models.CharField(max_length=255)
     description = models.TextField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=10, decimal_places=2,default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return self.name

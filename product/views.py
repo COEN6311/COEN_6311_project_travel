@@ -2,22 +2,24 @@ import json
 from itertools import chain
 
 from django.db import transaction
+from django.views.decorators.http import require_http_methods
+from rest_framework.decorators import api_view
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from user.customPermission import IsAgentPermission
-from .serializers import FlightTicketSerializer, HotelSerializer
+from .serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
-from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User
+from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity
 
 
 class CustomPagination(PageNumberPagination):
-    page_size = 5
+    page_size = 10
     page_size_query_param = 'page_size'
-    max_page_size = 5
+    max_page_size = 10
 
 
 # Function to get model and serializer based on type
@@ -26,6 +28,8 @@ def get_model_and_serializer(type_param):
         return FlightTicket, FlightTicketSerializer
     elif type_param == '2':
         return Hotel, HotelSerializer
+    elif type_param == '3':
+        return Activity, ActivitySerializer
     else:
         return None, None
 
@@ -44,6 +48,8 @@ def get_model_by_item_type(item_type):
         return FlightTicket
     elif item_type == 2:
         return Hotel
+    elif item_type == 3:
+        return Activity
     else:
         # Raise an exception if the type is not expected
         raise ValueError(f"Invalid item type {item_type}")
@@ -188,8 +194,8 @@ def add_package(request):
                 # 更新CustomPackage的价格
                 custom_package.price = total_price
                 custom_package.save()
-            # If all operations are successfully executed, return a success response
-            return JsonResponse({"status": "success", "package_id": custom_package.id})
+            serializer = CustomPackageSerializer(custom_package)
+            return JsonResponse({"status": "success", "package": serializer.data})
 
     except ObjectDoesNotExist as e:
         # If an item does not exist during validation, return an error response
@@ -200,3 +206,103 @@ def add_package(request):
     except Exception as e:
         # Catch all other exceptions
         return JsonResponse({"status": "error", "message": "Unexpected error occurred."})
+
+
+@require_http_methods(["POST"])
+def update_package(request, package_id):
+    pagination_class = CustomPagination
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        name = data.get('name')
+        description = data.get('description')
+        price = data.get('price')
+        items_data = data.get('items', [])  # 包含项目更新信息
+
+        with transaction.atomic():  # 使用事务确保数据一致性
+            # 尝试获取套餐
+            custom_package = CustomPackage.objects.select_for_update().get(id=package_id)
+
+            # 更新基本字段（如果提供）
+            if name:
+                custom_package.name = name
+            if description:
+                custom_package.description = description
+            if price:
+                custom_package.price = price
+
+            # 处理项目依赖关系的更新
+            existing_item_ids = [item['id'] for item in items_data if 'id' in item]
+            # 删除不存在于更新数据中的项目
+            custom_package.packageitem_set.exclude(item_object_id__in=existing_item_ids).delete()
+
+            for item in items_data:
+                item_id = item.get('id')
+                item_type = item.get('type')
+                number = item.get('number')
+
+                # 根据item_type获取对应的model
+                model = get_model_by_item_type(item_type)
+
+                # 检查item是否存在
+                model_instance = model.objects.get(id=item_id)
+
+                # 获取或创建PackageItem
+                package_item, created = PackageItem.objects.get_or_create(
+                    package=custom_package,
+                    item_content_type=ContentType.objects.get_for_model(model),
+                    item_object_id=item_id,
+                    defaults={'quantity': number, 'type': item_type}
+                )
+                if not created:
+                    # 如果项目已存在，则更新数量
+                    package_item.quantity = number
+                    package_item.save()
+
+            custom_package.save()  # 保存套餐更新
+
+            return JsonResponse({"status": "success", "message": "Package updated successfully."})
+    except CustomPackage.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Package not found."})
+    except ObjectDoesNotExist:
+        return JsonResponse({"status": "error", "message": "One or more items not found."})
+    except Exception as e:
+        # 捕获并返回其他所有异常
+        return JsonResponse({"status": "error", "message": str(e)})
+
+
+
+@api_view(['GET'])
+def view_packages(request, package_id=None):
+    pagination_class = CustomPagination()
+    if package_id:
+        try:
+            custom_package = CustomPackage.objects.get(id=package_id)
+            serializer = CustomPackageSerializer(custom_package)
+            return Response({"status": "success", "package": serializer.data})
+        except CustomPackage.DoesNotExist:
+            return Response({"status": "error", "message": "Package not found."})
+    else:
+        queryset = CustomPackage.objects.all()
+        page = pagination_class.paginate_queryset(queryset, request)
+        serializer = CustomPackageSerializer(page, many=True, context={'request': request})
+        return pagination_class.get_paginated_response(serializer.data)
+
+
+@api_view(['GET'])
+def view_user_packages(request):
+    try:
+        owner = request.user
+    except User.DoesNotExist:
+        return Response({"status": "error", "message": "User not found."})
+
+    # 获取该用户创建的所有CustomPackage
+    queryset = CustomPackage.objects.filter(owner=owner)
+
+    # 使用自定义分页
+    paginator = CustomPagination()
+    page = paginator.paginate_queryset(queryset, request)
+
+    # 序列化分页的套餐
+    serializer = CustomPackageSerializer(page, many=True, context={'request': request})
+
+    return paginator.get_paginated_response(serializer.data)
