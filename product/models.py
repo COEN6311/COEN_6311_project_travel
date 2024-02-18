@@ -48,6 +48,9 @@ class CustomPackage(Item):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ['-create_time']
+
 
 class PackageItem(BaseModel):
     package = models.ForeignKey(CustomPackage, on_delete=models.CASCADE)

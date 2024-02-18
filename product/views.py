@@ -39,6 +39,7 @@ def get_all_models_and_serializers():
     return [
         (FlightTicket, FlightTicketSerializer),
         (Hotel, HotelSerializer),
+        (Activity, ActivitySerializer),
     ]
 
 
@@ -89,8 +90,8 @@ class CustomAPIView(APIView):
             model, _ = get_model_and_serializer(type_param)
             obj = model.objects.filter(id=obj_id).first()
             if obj:
-                obj.delete()
-                return Response(status=204)
+                obj.soft_delete()  # soft delete
+                return Response({'result': True, 'message': 'Object soft-deleted successfully'}, status=204)
             else:
                 return Response({'result': False, 'errorMsg': 'This id does not exist'}, status=404)
 

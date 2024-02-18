@@ -13,5 +13,9 @@ class BaseModel(models.Model):
 
     objects = BaseModelManager()
 
+    def soft_delete(self):
+        self.is_delete = True
+        self.save()
+
     class Meta:
         abstract = True
