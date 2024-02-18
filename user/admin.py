@@ -3,8 +3,8 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'is_active', 'is_agent')
-    search_fields = ['username', 'email', 'is_active', 'is_agent']
+    list_display = ('email', 'is_active', 'is_agent')
+    search_fields = ['email', 'is_active', 'is_agent']
     actions = ['deactivate_users', 'delete_users']
 
     def deactivate_users(self, request, queryset):
