@@ -4,7 +4,7 @@ from itertools import chain
 from django.db import transaction
 from django.views.decorators.http import require_http_methods
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
@@ -117,7 +117,9 @@ class CustomAPIView(APIView):
         obj_id = request.query_params.get('id')
 
         if obj_id and not type_param:
-            return Response({'result': False, 'errorMsg': 'When an ID is provided, the Type parameter is required.', 'message': "", 'data': None}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'result': False, 'errorMsg': 'When an ID is provided, the Type parameter is required.', 'message': "",
+                 'data': None}, status=status.HTTP_400_BAD_REQUEST)
 
         all_models_and_serializers = get_all_models_and_serializers()
         if type_param:
@@ -128,7 +130,8 @@ class CustomAPIView(APIView):
                     queryset = queryset.filter(id=obj_id)
                 all_data = [(queryset, serializer_class)]
         else:
-            all_data = [(model.objects.all().order_by('-create_time'), serializer) for model, serializer in all_models_and_serializers]
+            all_data = [(model.objects.all().order_by('-create_time'), serializer) for model, serializer in
+                        all_models_and_serializers]
 
         combined_queryset = list(chain.from_iterable([data[0] for data in all_data]))
 
@@ -143,9 +146,11 @@ class CustomAPIView(APIView):
                         serializer = serializer_class(obj, context={'request': request})
                         serialized_data.append(serializer.data)
                         break
-            return paginator.get_paginated_response({"result": True, "message": "Data fetched successfully", "data": serialized_data, "errorMsg": ""})
+            return paginator.get_paginated_response(
+                {"result": True, "message": "Data fetched successfully", "data": serialized_data, "errorMsg": ""})
 
-@api_view(['POST'])
+
+@api_view(["POST"])
 def add_package(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -239,6 +244,7 @@ def update_package(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def view_packages(request):
     pagination_class = CustomPagination()
     id = request.query_params.get('id')
