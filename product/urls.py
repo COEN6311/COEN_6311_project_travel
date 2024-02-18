@@ -11,5 +11,6 @@ urlpatterns = [
     path('package/insert/', views.add_package, name='add_package'),
     path('package/user/', view_user_packages, name='view_user_packages'),
     path('package/', views.view_packages, name='view_packages'),
+    path('package/delete/', views.delete_package, name='delete_package'),
     path('package/update/', views.update_package, name='update_package'),
 ]

@@ -39,9 +39,14 @@ class ActivitySerializer(SerializerTypeMixin, serializers.ModelSerializer):
 
 
 class PackageItemSerializer(serializers.ModelSerializer):
+    item_id = serializers.SerializerMethodField()
+
     class Meta:
         model = PackageItem
-        fields = ['id', 'type', 'quantity']
+        fields = ['type', 'quantity', 'item_id']
+
+    def get_item_id(self, obj):
+        return obj.item_object_id
 
 
 class CustomPackageSerializer(serializers.ModelSerializer):

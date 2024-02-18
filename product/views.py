@@ -3,6 +3,7 @@ from itertools import chain
 
 from django.db import transaction
 from django.views.decorators.http import require_http_methods
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -114,9 +115,10 @@ class CustomAPIView(APIView):
     def get(self, request, *args, **kwargs):
         type_param = request.query_params.get('type')
         obj_id = request.query_params.get('id')
-        all_data = None
+
         if obj_id and not type_param:
-            return Response({'error': 'When an ID is provided, the Type parameter is required.'}, status=400)
+            return Response({'result': False, 'errorMsg': 'When an ID is provided, the Type parameter is required.', 'message': "", 'data': None}, status=status.HTTP_400_BAD_REQUEST)
+
         all_models_and_serializers = get_all_models_and_serializers()
         if type_param:
             model, serializer_class = get_model_and_serializer(type_param)
@@ -126,8 +128,7 @@ class CustomAPIView(APIView):
                     queryset = queryset.filter(id=obj_id)
                 all_data = [(queryset, serializer_class)]
         else:
-            all_data = [(model.objects.all().order_by('-create_time'), serializer) for model, serializer in
-                        all_models_and_serializers]
+            all_data = [(model.objects.all().order_by('-create_time'), serializer) for model, serializer in all_models_and_serializers]
 
         combined_queryset = list(chain.from_iterable([data[0] for data in all_data]))
 
@@ -139,101 +140,71 @@ class CustomAPIView(APIView):
             for obj in page:
                 for model, serializer_class in all_models_and_serializers:
                     if isinstance(obj, model):
-                        serializer = serializer_class(obj)
+                        serializer = serializer_class(obj, context={'request': request})
                         serialized_data.append(serializer.data)
                         break
-            return paginator.get_paginated_response(serialized_data)
-
+            return paginator.get_paginated_response({"result": True, "message": "Data fetched successfully", "data": serialized_data, "errorMsg": ""})
 
 @api_view(['POST'])
 def add_package(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
-        name = data.get('name')
-        description = data.get('description')
-        owner = request.user  # Use the authenticated user as the owner
+        owner = request.user
         items_data = data.get('items', [])
-        price_provided = 'price' in data
 
-        total_price = data.get('price', 0) if price_provided else 0
-
-        with transaction.atomic():  # Start a transaction
-            # Create CustomPackage object within the transaction
+        with transaction.atomic():
             custom_package = CustomPackage.objects.create(
-                name=name,
-                description=description,
+                name=data.get('name'),
+                description=data.get('description'),
                 owner=owner,
-                price=total_price
+                price=data.get('price', 0)
             )
 
             for item in items_data:
                 item_type = item.get('type')
                 item_id = item.get('id')
-                number = item.get('number')
+                quantity = item.get('number')
 
                 model = get_model_by_item_type(item_type)
-                try:
-                    # Attempt to get the instance directly, avoiding redundant checks
-                    model_instance = model.objects.get(id=item_id)
-                    if not price_provided:
-                        # Calculate the total price
-                        total_price += model_instance.price * number
-                except model.DoesNotExist:
-                    # If the instance doesn't exist, raise a more specific exception
-                    raise ObjectDoesNotExist(f"{model.__name__} with ID {item_id} not found.")
-                # Get the ContentType for the model
-                item_content_type = ContentType.objects.get_for_model(model)
+                model_instance = model.objects.get(id=item_id)
+
                 PackageItem.objects.create(
                     package=custom_package,
-                    item_content_type=item_content_type,
+                    item_content_type=ContentType.objects.get_for_model(model),
                     item_object_id=item_id,
-                    quantity=number,
-                    type=item_type  # Use this field according to your business logic
+                    quantity=quantity,
+                    type=item_type
                 )
 
-            if not price_provided:
-                # 更新CustomPackage的价格
-                custom_package.price = total_price
-                custom_package.save()
             serializer = CustomPackageSerializer(custom_package)
-            return JsonResponse({"status": "success", "package": serializer.data})
-
-    except ObjectDoesNotExist as e:
-        # If an item does not exist during validation, return an error response
-        return JsonResponse({"status": "error", "message": str(e)})
-    except ValueError as e:
-        # If an invalid type is provided, return an error response
-        return JsonResponse({"status": "error", "message": str(e)})
+            return JsonResponse(
+                {"result": True, "message": "Package added successfully", "data": serializer.data, "errorMsg": ""},
+                status=status.HTTP_200_OK)
     except Exception as e:
-        # Catch all other exceptions
-        return JsonResponse({"status": "error", "message": "Unexpected error occurred."})
+        return JsonResponse({"result": False, "message": "", "errorMsg": str(e), "data": None},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
 def update_package(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
-        name = data.get('name')
         package_id = data.get('id')
-        description = data.get('description')
-        price = data.get('price')
-        items_data = data.get('items', [])  # 包含项目更新信息
+        # Ensure package_id is provided
+        if not package_id:
+            return JsonResponse({"result": False, "errorMsg": "Package ID is required", "message": "", "data": None},
+                                status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():  # 使用事务确保数据一致性
-            # 尝试获取套餐
+        with transaction.atomic():
             custom_package = CustomPackage.objects.select_for_update().get(id=package_id)
 
-            # 更新基本字段（如果提供）
-            if name:
-                custom_package.name = name
-            if description:
-                custom_package.description = description
-            if price:
-                custom_package.price = price
+            custom_package.name = data.get('name', custom_package.name)
+            custom_package.description = data.get('description', custom_package.description)
+            custom_package.price = data.get('price', custom_package.price)
 
-            # 处理项目依赖关系的更新
-            existing_item_ids = [item['id'] for item in items_data if 'id' in item]
-            # 删除不存在于更新数据中的项目
+            # Process items_data if provided
+            items_data = data.get('items', [])
+            existing_item_ids = [item.get('id') for item in items_data if item.get('id')]
             custom_package.packageitem_set.exclude(item_object_id__in=existing_item_ids).delete()
 
             for item in items_data:
@@ -241,34 +212,30 @@ def update_package(request):
                 item_type = item.get('type')
                 number = item.get('number')
 
-                # 根据item_type获取对应的model
                 model = get_model_by_item_type(item_type)
-
-                # 检查item是否存在
                 model_instance = model.objects.get(id=item_id)
 
-                # 获取或创建PackageItem
-                package_item, created = PackageItem.objects.get_or_create(
+                package_item, created = PackageItem.objects.update_or_create(
                     package=custom_package,
                     item_content_type=ContentType.objects.get_for_model(model),
                     item_object_id=item_id,
                     defaults={'quantity': number, 'type': item_type}
                 )
-                if not created:
-                    # 如果项目已存在，则更新数量
-                    package_item.quantity = number
-                    package_item.save()
 
-            custom_package.save()  # 保存套餐更新
-
-            return JsonResponse({"status": "success", "message": "Package updated successfully."})
+            custom_package.save()
+            serializer = CustomPackageSerializer(custom_package)
+            return JsonResponse(
+                {"result": True, "message": "Package updated successfully", "errorMsg": "", "data": serializer.data},
+                status=status.HTTP_200_OK)
     except CustomPackage.DoesNotExist:
-        return JsonResponse({"status": "error", "message": "Package not found."})
+        return JsonResponse({"result": False, "errorMsg": "Package not found", "message": "", "data": None},
+                            status=status.HTTP_400_BAD_REQUEST)
     except ObjectDoesNotExist:
-        return JsonResponse({"status": "error", "message": "One or more items not found."})
+        return JsonResponse({"result": False, "errorMsg": "One or more items not found", "message": "", "data": None},
+                            status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        # 捕获并返回其他所有异常
-        return JsonResponse({"status": "error", "message": str(e)})
+        return JsonResponse({"result": False, "errorMsg": str(e), "message": "", "data": None},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -279,31 +246,41 @@ def view_packages(request):
         try:
             custom_package = CustomPackage.objects.get(id=id)
             serializer = CustomPackageSerializer(custom_package)
-            return Response({"status": "success", "package": serializer.data})
+            return Response({"result": True, "message": "Package found", "data": serializer.data, "errorMsg": ""},
+                            status=status.HTTP_200_OK)
         except CustomPackage.DoesNotExist:
-            return Response({"status": "error", "message": "Package not found."})
+            return Response({"result": False, "message": "", "errorMsg": "Package not found", "data": None},
+                            status=status.HTTP_400_BAD_REQUEST)
     else:
         queryset = CustomPackage.objects.all()
         page = pagination_class.paginate_queryset(queryset, request)
-        serializer = CustomPackageSerializer(page, many=True, context={'request': request})
-        return pagination_class.get_paginated_response(serializer.data)
+        serializer = CustomPackageSerializer(page, many=True)
+        return pagination_class.get_paginated_response(
+            {"result": True, "message": "Packages list", "data": serializer.data, "errorMsg": ""})
 
 
 @api_view(['GET'])
 def view_user_packages(request):
-    try:
-        owner = request.user
-    except User.DoesNotExist:
-        return Response({"status": "error", "message": "User not found."})
-
-    # 获取该用户创建的所有CustomPackage
+    pagination_class = CustomPagination()
+    owner = request.user
     queryset = CustomPackage.objects.filter(owner=owner)
+    page = pagination_class.paginate_queryset(queryset, request)
+    serializer = CustomPackageSerializer(page, many=True)
+    return pagination_class.get_paginated_response(
+        {"result": True, "message": "User packages list", "data": serializer.data, "errorMsg": ""})
 
-    # 使用自定义分页
-    paginator = CustomPagination()
-    page = paginator.paginate_queryset(queryset, request)
 
-    # 序列化分页的套餐
-    serializer = CustomPackageSerializer(page, many=True, context={'request': request})
-
-    return paginator.get_paginated_response(serializer.data)
+@api_view(['POST'])
+def delete_package(request):
+    obj_id = request.data.get('id')
+    if not obj_id:
+        return Response({'result': False, 'errorMsg': 'Please put id', 'message': "", 'data': None},
+                        status=status.HTTP_400_BAD_REQUEST)
+    try:
+        obj = CustomPackage.objects.get(id=obj_id)
+        obj.soft_delete()  # Assuming soft_delete() marks the is_delete field
+        return Response({'result': True, 'message': 'Package deleted successfully', 'data': None, 'errorMsg': ""},
+                        status=status.HTTP_200_OK)
+    except CustomPackage.DoesNotExist:
+        return Response({'result': False, 'errorMsg': 'Package not found', 'message': "", 'data': None},
+                        status=status.HTTP_400_BAD_REQUEST)
