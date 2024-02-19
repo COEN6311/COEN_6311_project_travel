@@ -50,7 +50,7 @@ def poll_redis_for_click_sign(email):
     # Poll Redis for click sign
     for _ in range(60):
         click_sign = redis_client.get(email)
-        if click_sign == email:
+        if not click_sign:
             return True
         else:
             time.sleep(1)  # Wait for 1 second before next polling
