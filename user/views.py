@@ -7,7 +7,59 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import logout
-from django.shortcuts import reverse
+import redis
+import time
+from utils.emailSend import send_custom_email
+from django.conf import settings
+from django.http import HttpResponse
+import urllib.parse
+
+
+# Initialize Redis connection
+redis_client = redis.StrictRedis(host='13.59.139.10', port=6379, db=0)
+
+import socket
+# def generate_confirmation_link(email, click_token):
+def generate_confirmation_link(click_sign):
+    ip_address = socket.gethostbyname(socket.gethostname())
+    # return f"http://{ip_address}/confirm?email={email}&token={click_token}"
+    return f"http://{ip_address}/confirm?click_sign={click_sign}"
+
+def send_verification_email(email, click_sign):
+    # Generate confirmation link
+    confirmation_link = generate_confirmation_link(click_sign)
+    # Send verification email
+    subject = "Confirm your registration"
+    message = f"Please click the following link to confirm your registration: {confirmation_link}"
+    send_custom_email(subject, message, email, settings.EMAIL_HOST_USER)
+
+@api_view(['GET'])
+def confirm_registration(request):
+    click_sign = request.GET.get('click_sign')
+    # 存储click_sign到Redis
+    redis_client.set(click_sign, click_sign)
+    # 返回响应，可以是一个确认页面或者重定向到其他页面
+    return Response({"message": "Registration confirmation send! Please continue your registration."})
+
+class EmailValidationTimeOut(Exception):
+    def __init__(self, message="Email validation timed out"):
+        self.message = message
+        super().__init__(self.message)
+
+def poll_redis_for_click_sign(email):
+    # Poll Redis for click sign
+    for _ in range(60):
+        click_sign = redis_client.get(email)
+        if click_sign == email:
+            return True
+        else:
+            time.sleep(1)  # Wait for 1 second before next polling
+    return False
+
+
+
+
+
 
 def is_strong_password(password):
     '''Check if the password meets the criteria for a strong password'''
@@ -79,12 +131,22 @@ def register_handle(request):
                     errorMsg = 'The email already exists!'
                 else:
                     '''If everything above is fine, do registration and login'''
-                    User.objects.create_user( password=password, email=email)
-                    user = authenticate(request, username=email, password=password)
-                    if user is not None:
-                        token, _ = Token.objects.get_or_create(user=user)
-                        login(request, user)  # Record the user's login status
-                        result = True
+                    #向用户发送邮件，包含一确认链接，同时开始检测用户是否点击链接，如已点击，继续注册，否则抛出一个异常，异常信息为“link timeout”
+                    click_token = email
+                    # Send verification email to the user
+                    send_verification_email(email, click_token)
+                    # Store click token in Redis to track user's verification status
+                    # redis_client.set(click_token, 'clicked')
+
+                    # Poll Redis for click sign
+                    if not poll_redis_for_click_sign(click_token):
+                        raise EmailValidationTimeOut
+                    # User.objects.create_user( password=password, email=email)
+                    # user = authenticate(request, username=email, password=password)
+                    # if user is not None:
+                    #     token, _ = Token.objects.get_or_create(user=user)
+                    #     login(request, user)  # Record the user's login status
+                    #     result = True
         except ValidationError:
             errorMsg = 'The email format is invalid！'
         except Exception as e:
