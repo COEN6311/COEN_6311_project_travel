@@ -36,16 +36,6 @@ def get_model_and_serializer(type_param):
         return None, None
 
 
-# Function to get all models and their serializers
-def get_all_models_and_serializers():
-    return [
-        (FlightTicket, FlightTicketSerializer),
-        (Hotel, HotelSerializer),
-        (Activity, ActivitySerializer),
-    ]
-
-
-# Function to get model by item type
 def get_model_by_item_type(item_type):
     if item_type == 1:
         return FlightTicket
@@ -58,7 +48,18 @@ def get_model_by_item_type(item_type):
         raise ValueError(f"Invalid item type {item_type}")
 
 
-class CustomAPIView(APIView):
+# Function to get all models and their serializers
+def get_all_models_and_serializers():
+    return [
+        (FlightTicket, FlightTicketSerializer),
+        (Hotel, HotelSerializer),
+        (Activity, ActivitySerializer),
+    ]
+
+
+# Function to get model by item type
+
+class ItemAPIView(APIView):
     pagination_class = CustomPagination
     parser_classes = [JSONParser]
 
@@ -82,9 +83,13 @@ class CustomAPIView(APIView):
         if action == 'insert':
             serializer = serializer_class(data=request.data)
             if serializer.is_valid():
-                serializer.save(owner=request.user)
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
+                serializer.save(owner=request.user, image_src=request.data.get('image_src'))
+                return Response(
+                    {'result': True, 'message': 'Data saved successfully', 'data': serializer.data, 'errorMsg': ''},
+                    status=status.HTTP_201_CREATED)
+            return Response(
+                {'result': False, 'errorMsg': 'Invalid data', 'message': "", 'data': None},
+                status=status.HTTP_400_BAD_REQUEST)
 
         elif action == 'delete':
             obj_id = request.data.get('id')
@@ -118,38 +123,28 @@ class CustomAPIView(APIView):
         type_param = request.query_params.get('type')
         obj_id = request.query_params.get('id')
 
-        if obj_id and not type_param:
+        if not type_param or not obj_id:
             return Response(
-                {'result': False, 'errorMsg': 'When an ID is provided, the Type parameter is required.', 'message': "",
+                {'result': False, 'errorMsg': 'Both Type and ID parameters are required.', 'message': "",
                  'data': None}, status=status.HTTP_400_BAD_REQUEST)
 
-        all_models_and_serializers = get_all_models_and_serializers()
-        if type_param:
-            model, serializer_class = get_model_and_serializer(type_param)
-            if model and serializer_class:
-                queryset = model.objects.all().order_by('-create_time')
-                if obj_id:
-                    queryset = queryset.filter(id=obj_id)
-                all_data = [(queryset, serializer_class)]
-        else:
-            all_data = [(model.objects.all().order_by('-create_time'), serializer) for model, serializer in
-                        all_models_and_serializers]
+        model, serializer_class = get_model_and_serializer(type_param)
+        if not model or not serializer_class:
+            return Response(
+                {'result': False, 'errorMsg': 'Invalid Type parameter.', 'message': "",
+                 'data': None}, status=status.HTTP_400_BAD_REQUEST)
 
-        combined_queryset = list(chain.from_iterable([data[0] for data in all_data]))
+        try:
+            obj = model.objects.get(id=obj_id)
+        except model.DoesNotExist:
+            return Response(
+                {'result': False, 'errorMsg': f'Object with ID {obj_id} does not exist for Type {type_param}.',
+                 'message': "", 'data': None}, status=status.HTTP_404_NOT_FOUND)
 
-        # Page handling
-        paginator = self.pagination_class()
-        page = paginator.paginate_queryset(combined_queryset, request, view=self)
-        if page is not None:
-            serialized_data = []
-            for obj in page:
-                for model, serializer_class in all_models_and_serializers:
-                    if isinstance(obj, model):
-                        serializer = serializer_class(obj, context={'request': request})
-                        serialized_data.append(serializer.data)
-                        break
-            return paginator.get_paginated_response(
-                {"result": True, "message": "Data fetched successfully", "data": serialized_data, "errorMsg": ""})
+        serializer = serializer_class(obj, context={'request': request})
+        return Response(
+            {"result": True, "message": "Data fetched successfully", "data": serializer.data, "errorMsg": ""},
+            status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
