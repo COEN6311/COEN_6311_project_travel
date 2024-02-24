@@ -16,9 +16,8 @@ class Item(BaseModel):
     image_url = models.URLField(max_length=1024, blank=True, null=True)
     start_date = models.DateField(default=default_start_date, blank=True, null=True)
     end_date = models.DateField(default=default_end_date, blank=True, null=True)
-
-    # todo handle order system's date
-    # todo feature
+    imageAlt = models.CharField(max_length=255)
+    image_src = models.URLField(max_length=1024, blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -26,25 +25,28 @@ class Item(BaseModel):
 
 class FlightTicket(Item):
     flight_number = models.CharField(max_length=100)
-    origin = models.CharField(max_length=100)
+    seat_class = models.CharField(max_length=100)
     destination = models.CharField(max_length=100)
     departure_time = models.TimeField(verbose_name='departure_time', blank=True, null=True)
+    Arrival_time = models.TimeField(verbose_name='arrival_time', blank=True, null=True)
 
 
 class Hotel(Item):
-    location = models.CharField(max_length=255)
-    # room_type = models.CharField(max_length=100)
+    hotel_name = models.CharField(max_length=255)
+    address = models.CharField(max_length=255)
+    check_in_time = models.TimeField(blank=True, null=True)
+    check_out_time = models.TimeField(blank=True, null=True)
 
 
 class Activity(Item):
+    Event = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
+    address = models.CharField(max_length=255)
+    time = models.TimeField(verbose_name='time', blank=True, null=True)
 
 
 class CustomPackage(Item):
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    features = models.JSONField(default=list)
 
     def __str__(self):
         return self.name
@@ -59,8 +61,7 @@ class PackageItem(BaseModel):
     item_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     item_object_id = models.PositiveIntegerField()
     item = GenericForeignKey('item_content_type', 'item_object_id')
-
-    type = models.PositiveSmallIntegerField()  # 考虑是否还需要这个字段与GenericForeignKey一起使用。
+    type = models.PositiveSmallIntegerField()
 
     class Meta:
         unique_together = ('package', 'item_content_type', 'item_object_id', 'type')

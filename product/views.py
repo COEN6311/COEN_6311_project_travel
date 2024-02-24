@@ -5,6 +5,7 @@ from django.db import transaction
 from django.views.decorators.http import require_http_methods
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
@@ -59,6 +60,7 @@ def get_model_by_item_type(item_type):
 
 class CustomAPIView(APIView):
     pagination_class = CustomPagination
+    parser_classes = [JSONParser]
 
     def get_permissions(self):
         """
