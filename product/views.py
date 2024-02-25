@@ -1,5 +1,6 @@
 import json
 import time
+from decimal import Decimal
 from itertools import chain
 
 from django.db import transaction
@@ -156,13 +157,26 @@ def add_package(request):
         data = json.loads(request.body.decode('utf-8'))
         owner = request.user
         items_data = data.get('items', [])
+        total_price = Decimal(data.get('price', 0))
+
+        for item in items_data:
+            item_type = item.get('type')
+            item_id = item.get('id')
+            quantity = item.get('number')
+
+            model = get_model_by_item_type(item_type)
+            model_instance = model.objects.get(id=item_id)
+
+            # 如果没有输入价格或者价格为0，则累加子项目的价格*数量
+            if total_price == 0:
+                total_price += model_instance.price * quantity
 
         with transaction.atomic():
             custom_package = CustomPackage.objects.create(
                 name=data.get('name'),
                 description=data.get('description'),
                 owner=owner,
-                price=data.get('price', 0),
+                price=total_price,
                 image_src=data.get('image_src'),
                 features=data.get('features')
             )
@@ -189,7 +203,6 @@ def add_package(request):
     except Exception as e:
         return JsonResponse({"result": False, "message": "", "errorMsg": str(e), "data": None},
                             status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(["POST"])
 def update_package(request):
