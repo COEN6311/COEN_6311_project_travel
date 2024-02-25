@@ -1,6 +1,10 @@
+import json
+import time
+
 from django.core.cache import cache
 from rest_framework import serializers
 from .models import FlightTicket, Hotel, PackageItem, CustomPackage, Activity, Item
+from .utils import detail_cache
 
 SERIALIZER_TYPE_MAP = {
     'FlightTicketSerializer': 1,
@@ -161,8 +165,9 @@ class CustomPackageSerializer(serializers.ModelSerializer):
         return f"Included: {options_str}"
 
     def get_details(self, obj):
+
         # Check if details are cached
-        cached_details = cache.get(f'package_details_{obj.id}')
+        cached_details = detail_cache.get_cached_details(obj.id)
         if cached_details:
             return cached_details
 
@@ -175,62 +180,11 @@ class CustomPackageSerializer(serializers.ModelSerializer):
 
         details = [features]
 
-        # Get package items from cache
-        flight_tickets = cache.get('flight_tickets')
-        hotels = cache.get('hotels')
-        activities = cache.get('activities')
-
+        # Get details from package items
         for item in obj.packageitem_set.all():
-            item_type = item.item_content_type.model_class().__name__
-            if item_type == 'FlightTicket':
-                # Check if flight_tickets is None (cache miss)
-                if flight_tickets is None:
-                    # Query FlightTicket from database directly
-                    flight_ticket_obj = FlightTicket.objects.filter(id=item.item_object_id).first()
-                    if flight_ticket_obj:
-                        item_serializer = FlightTicketSerializer(flight_ticket_obj)
-                        item_details = item_serializer.data.get('details', [])
-                        details.extend(item_details)
-                else:
-                    # Use cached flight_tickets
-                    item_obj = next((x for x in flight_tickets if x.id == item.item_object_id), None)
-                    if item_obj:
-                        item_serializer = FlightTicketSerializer(item_obj)
-                        item_details = item_serializer.data.get('details', [])
-                        details.extend(item_details)
-            elif item_type == 'Hotel':
-                # Check if hotels is None (cache miss)
-                if hotels is None:
-                    # Query Hotel from database directly
-                    hotel_obj = Hotel.objects.filter(id=item.item_object_id).first()
-                    if hotel_obj:
-                        item_serializer = HotelSerializer(hotel_obj)
-                        item_details = item_serializer.data.get('details', [])
-                        details.extend(item_details)
-                else:
-                    # Use cached hotels
-                    item_obj = next((x for x in hotels if x.id == item.item_object_id), None)
-                    if item_obj:
-                        item_serializer = HotelSerializer(item_obj)
-                        item_details = item_serializer.data.get('details', [])
-                        details.extend(item_details)
-            elif item_type == 'Activity':
-                # Check if activities is None (cache miss)
-                if activities is None:
-                    # Query Activity from database directly
-                    activity_obj = Activity.objects.filter(id=item.item_object_id).first()
-                    if activity_obj:
-                        item_serializer = ActivitySerializer(activity_obj)
-                        item_details = item_serializer.data.get('details', [])
-                        details.extend(item_details)
-                else:
-                    # Use cached activities
-                    item_obj = next((x for x in activities if x.id == item.item_object_id), None)
-                    if item_obj:
-                        item_serializer = ActivitySerializer(item_obj)
-                        item_details = item_serializer.data.get('details', [])
-                        details.extend(item_details)
-
-            # Cache details
-        cache.set(f'package_details_{obj.id}', details)
+            detail_data = item.detail
+            if detail_data:
+                details.append(detail_data)
+        # Cache the details
+        detail_cache.cache_details(obj.id, details)
         return details

@@ -1,0 +1,1 @@
+redis_key_packages_with_items_data = "packages_with_items_data"

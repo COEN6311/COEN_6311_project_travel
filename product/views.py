@@ -20,7 +20,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
 from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity
 from django.core.cache import cache
-
+from .utils import get_item_detail
+from django_redis import get_redis_connection
+# 获取默认的 Redis 连接对象
+redis_conn = get_redis_connection("default")
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -157,44 +160,39 @@ def add_package(request):
         data = json.loads(request.body.decode('utf-8'))
         owner = request.user
         items_data = data.get('items', [])
-        total_price = Decimal(data.get('price', 0))
-
-        for item in items_data:
-            item_type = item.get('type')
-            item_id = item.get('id')
-            quantity = item.get('number')
-
-            model = get_model_by_item_type(item_type)
-            model_instance = model.objects.get(id=item_id)
-
-            # 如果没有输入价格或者价格为0，则累加子项目的价格*数量
-            if total_price == 0:
-                total_price += model_instance.price * quantity
 
         with transaction.atomic():
             custom_package = CustomPackage.objects.create(
                 name=data.get('name'),
                 description=data.get('description'),
                 owner=owner,
-                price=total_price,
+                price=data.get('price', 0),
                 image_src=data.get('image_src'),
                 features=data.get('features')
             )
 
-            for item in items_data:
-                item_type = item.get('type')
-                item_id = item.get('id')
-                quantity = item.get('number')
+            total_price = data.get('price', 0)
+            for item_data in items_data:
+                item_type = item_data.get('type')
+                item_id = item_data.get('id')
+                quantity = item_data.get('number')
 
                 model = get_model_by_item_type(item_type)
                 model_instance = model.objects.get(id=item_id)
+                item_price = model_instance.price * quantity
+                total_price += item_price
+
                 PackageItem.objects.create(
                     package=custom_package,
                     item_content_type=ContentType.objects.get_for_model(model),
                     item_object_id=item_id,
                     quantity=quantity,
-                    type=item_type
+                    type=item_type,
+                    detail=get_item_detail(item_type, model_instance)
                 )
+
+            custom_package.price = total_price
+            custom_package.save()
 
             serializer = CustomPackageSerializer(custom_package)
             return JsonResponse(
@@ -203,6 +201,7 @@ def add_package(request):
     except Exception as e:
         return JsonResponse({"result": False, "message": "", "errorMsg": str(e), "data": None},
                             status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(["POST"])
 def update_package(request):
@@ -283,7 +282,7 @@ def view_packages(request):
 def view_user_packages(request):
     pagination_class = CustomPagination()
     owner = request.user
-    queryset = CustomPackage.objects.filter(owner=owner)
+    queryset = CustomPackage.objects.prefetch_related('packageitem_set').filter(owner=owner)
     page = pagination_class.paginate_queryset(queryset, request)
     serializer = CustomPackageSerializer(page, many=True)
     return pagination_class.get_paginated_response(
@@ -309,22 +308,19 @@ def delete_package(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def packages_with_items(request):
-    start_time = time.time()
+    # start_time = time.time()
+    response_data = cache.get('packages_with_items_data')
+    if response_data:
+        return Response(response_data)
 
     # Retrieve all packages
-    packages = CustomPackage.objects.all()
+    packages = CustomPackage.objects.prefetch_related('packageitem_set').all()
     package_serializer = CustomPackageSerializer(packages, many=True)
-
-    print(f"Retrieving and serializing packages took {time.time() - start_time} seconds")
-    start_time = time.time()
 
     # Retrieve all items
     flight_tickets = FlightTicket.objects.all()
     hotels = Hotel.objects.all()
     activities = Activity.objects.all()
-
-    print(f"Retrieving all items took {time.time() - start_time} seconds")
-    start_time = time.time()
 
     # Serialize all items
     flight_ticket_serializer = FlightTicketSerializer(flight_tickets, many=True)
@@ -333,29 +329,23 @@ def packages_with_items(request):
     cache.set('flight_tickets', flight_tickets)
     cache.set('hotels', hotels)
     cache.set('activities', activities)
-    print(f"Serializing all items took {time.time() - start_time} seconds")
-    start_time = time.time()
 
-    # Prepare response data
     response_data = []
 
     # Append packages to response data with their details
     for package_data in package_serializer.data:
         response_data.append(package_data)
-    print(f"Building response data took {time.time() - start_time} seconds")
 
     # Append items to response data
     for item_data in flight_ticket_serializer.data:
         response_data.append(item_data)
-    print(f"Building response data took {time.time() - start_time} seconds")
 
     for item_data in hotel_serializer.data:
         response_data.append(item_data)
-    print(f"Building response data took {time.time() - start_time} seconds")
 
     for item_data in activity_serializer.data:
         response_data.append(item_data)
 
-    print(f"Building response data took {time.time() - start_time} seconds")
+    cache.set('packages_with_items_data', response_data)
 
     return Response(response_data)

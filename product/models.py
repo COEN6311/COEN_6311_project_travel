@@ -61,6 +61,7 @@ class PackageItem(BaseModel):
     item_object_id = models.PositiveIntegerField()
     item = GenericForeignKey('item_content_type', 'item_object_id')
     type = models.PositiveSmallIntegerField()
+    detail = models.JSONField(blank=True, null=True)
 
     class Meta:
         unique_together = ('package', 'item_content_type', 'item_object_id', 'type')
