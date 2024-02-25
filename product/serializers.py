@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework import serializers
 from .models import FlightTicket, Hotel, PackageItem, CustomPackage, Activity, Item
 
@@ -129,8 +130,78 @@ class PackageItemSerializer(serializers.ModelSerializer):
 
 
 class CustomPackageSerializer(serializers.ModelSerializer):
-    items = PackageItemSerializer(source='packageitem_set', many=True)
+    details = serializers.SerializerMethodField(read_only=True)
+    options = serializers.SerializerMethodField(read_only=True)
+    imageSrc = serializers.URLField(source='image_src', read_only=True)
+    imageAlt = serializers.CharField(source='name', read_only=True)
+    type = serializers.CharField(default='package', read_only=True)
+    features = serializers.JSONField(write_only=True)
 
     class Meta:
         model = CustomPackage
-        fields = ['id', 'name', 'description', 'owner', 'price', 'items']
+        fields = ['id', 'name', 'description', 'price', 'details', 'options', 'imageSrc', 'imageAlt', 'type',
+                  'features']
+
+    def get_options(self, obj):
+        options = []
+
+        # Check if flight, hotel, or activity is included in the package
+        package_items = obj.packageitem_set.all()
+        for item in package_items:
+            item_type = item.item_content_type.model_class().__name__
+            if item_type == 'FlightTicket':
+                options.append('Flights')
+            elif item_type == 'Hotel':
+                options.append('Hotel')
+            elif item_type == 'Activity':
+                options.append('Activities')
+
+        # Include the options in the desired format
+        options_str = ', '.join(options)
+        return f"Included: {options_str}"
+
+    def get_details(self, obj):
+        # Check if details are cached
+        cached_details = cache.get(f'package_details_{obj.id}')
+        if cached_details:
+            return cached_details
+
+        # Get package features
+        features = {
+            'name': 'Features',
+            'items': obj.features,
+            'type': 'package'
+        }
+
+        details = [features]
+
+        # Get package items from cache
+        flight_tickets = cache.get('flight_tickets')
+        hotels = cache.get('hotels')
+        activities = cache.get('activities')
+
+        # Append item details to package details
+        for item in obj.packageitem_set.all():
+            item_type = item.item_content_type.model_class().__name__
+            if item_type == 'FlightTicket':
+                item_obj = next((x for x in flight_tickets if x.id == item.item_object_id), None)
+                if item_obj:
+                    item_serializer = FlightTicketSerializer(item_obj)
+                    item_details = item_serializer.data.get('details', [])
+                    details.extend(item_details)
+            elif item_type == 'Hotel':
+                item_obj = next((x for x in hotels if x.id == item.item_object_id), None)
+                if item_obj:
+                    item_serializer = HotelSerializer(item_obj)
+                    item_details = item_serializer.data.get('details', [])
+                    details.extend(item_details)
+            elif item_type == 'Activity':
+                item_obj = next((x for x in activities if x.id == item.item_object_id), None)
+                if item_obj:
+                    item_serializer = ActivitySerializer(item_obj)
+                    item_details = item_serializer.data.get('details', [])
+                    details.extend(item_details)
+
+        # Cache details
+        cache.set(f'package_details_{obj.id}', details)
+        return details

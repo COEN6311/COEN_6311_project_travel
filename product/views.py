@@ -1,8 +1,10 @@
 import json
+import time
 from itertools import chain
 
 from django.db import transaction
 from django.views.decorators.http import require_http_methods
+from line_profiler import profile
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser
@@ -16,6 +18,7 @@ from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
 from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity
+from django.core.cache import cache
 
 
 class CustomPagination(PageNumberPagination):
@@ -159,7 +162,9 @@ def add_package(request):
                 name=data.get('name'),
                 description=data.get('description'),
                 owner=owner,
-                price=data.get('price', 0)
+                price=data.get('price', 0),
+                image_src=data.get('image_src'),
+                features=data.get('features')
             )
 
             for item in items_data:
@@ -169,7 +174,6 @@ def add_package(request):
 
                 model = get_model_by_item_type(item_type)
                 model_instance = model.objects.get(id=item_id)
-
                 PackageItem.objects.create(
                     package=custom_package,
                     item_content_type=ContentType.objects.get_for_model(model),
@@ -287,3 +291,58 @@ def delete_package(request):
     except CustomPackage.DoesNotExist:
         return Response({'result': False, 'errorMsg': 'Package not found', 'message': "", 'data': None},
                         status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def packages_with_items(request):
+    start_time = time.time()
+
+    # Retrieve all packages
+    packages = CustomPackage.objects.all()
+    package_serializer = CustomPackageSerializer(packages, many=True)
+
+    print(f"Retrieving and serializing packages took {time.time() - start_time} seconds")
+    start_time = time.time()
+
+    # Retrieve all items
+    flight_tickets = FlightTicket.objects.all()
+    hotels = Hotel.objects.all()
+    activities = Activity.objects.all()
+
+    print(f"Retrieving all items took {time.time() - start_time} seconds")
+    start_time = time.time()
+
+    # Serialize all items
+    flight_ticket_serializer = FlightTicketSerializer(flight_tickets, many=True)
+    hotel_serializer = HotelSerializer(hotels, many=True)
+    activity_serializer = ActivitySerializer(activities, many=True)
+    cache.set('flight_tickets', flight_tickets)
+    cache.set('hotels', hotels)
+    cache.set('activities', activities)
+    print(f"Serializing all items took {time.time() - start_time} seconds")
+    start_time = time.time()
+
+    # Prepare response data
+    response_data = []
+
+    # Append packages to response data with their details
+    for package_data in package_serializer.data:
+        response_data.append(package_data)
+    print(f"Building response data took {time.time() - start_time} seconds")
+
+    # Append items to response data
+    for item_data in flight_ticket_serializer.data:
+        response_data.append(item_data)
+    print(f"Building response data took {time.time() - start_time} seconds")
+
+    for item_data in hotel_serializer.data:
+        response_data.append(item_data)
+    print(f"Building response data took {time.time() - start_time} seconds")
+
+    for item_data in activity_serializer.data:
+        response_data.append(item_data)
+
+    print(f"Building response data took {time.time() - start_time} seconds")
+
+    return Response(response_data)
