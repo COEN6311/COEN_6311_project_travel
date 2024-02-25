@@ -8,17 +8,18 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import logout
-import redis
 import time
 from utils.emailSend import send_custom_email
 from django.conf import settings
 
 
 
-# Initialize Redis connection
-redis_client = redis.StrictRedis(host='13.59.139.10', port=6379, db=0)
 
 import socket
+
+from utils.redis_connect import redis_client
+
+
 # def generate_confirmation_link(email, click_token):
 def generate_confirmation_link(click_sign):
     response = requests.get('https://api.ipify.org')

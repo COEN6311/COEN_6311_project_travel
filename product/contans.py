@@ -1,1 +1,2 @@
 redis_key_packages_with_items_data = "packages_with_items_data"
+redis_expire_packages_with_items_data = 10*60

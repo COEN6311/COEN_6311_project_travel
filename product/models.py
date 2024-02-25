@@ -32,7 +32,7 @@ class FlightTicket(Item):
 class Hotel(Item):
     hotel_name = models.CharField(max_length=255)
     address = models.CharField(max_length=255)
-    room = models.CharField(max_length=255,blank=True, null=True)
+    room = models.CharField(max_length=255, blank=True, null=True)
     check_in_time = models.TimeField(blank=True, null=True)
     check_out_time = models.TimeField(blank=True, null=True)
 
@@ -64,4 +64,12 @@ class PackageItem(BaseModel):
     detail = models.JSONField(blank=True, null=True)
 
     class Meta:
-        unique_together = ('package', 'item_content_type', 'item_object_id', 'type')
+        unique_together = ('package', 'item_content_type', 'item_object_id', 'type', 'is_delete')
+
+
+def soft_delete_package_item(item_id, item_type):
+    package_items = PackageItem.objects.filter(
+        item_object_id=item_id,
+        type=item_type
+    )
+    package_items.update(is_delete=True)

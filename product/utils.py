@@ -2,7 +2,7 @@ from django.core.cache import cache
 
 
 def get_item_detail(item_type, item_instance):
-    if item_type == 1:
+    if item_type == 1 or item_type == '1':
         return {
             'name': 'Flight Details',
             'items': [
@@ -14,7 +14,7 @@ def get_item_detail(item_type, item_instance):
             ],
             'type': 'flight',
         }
-    elif item_type == 2:
+    elif item_type == 2 or item_type == '2':
         return {
             'name': 'Hotel Details',
             'items': [
@@ -26,7 +26,7 @@ def get_item_detail(item_type, item_instance):
             ],
             'type': 'hotel',
         }
-    elif item_type == 3:
+    elif item_type == 3 or item_type == '3':
         return {
             'name': item_instance.name,
             'items': [

@@ -1,11 +1,7 @@
 import json
-import time
-from decimal import Decimal
-from itertools import chain
 
 from django.db import transaction
-from django.views.decorators.http import require_http_methods
-from line_profiler import profile
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser
@@ -18,12 +14,10 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
-from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity
-from django.core.cache import cache
+from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity, soft_delete_package_item
+from .service.package_service import get_packages_with_items, refresh_redis_packages_with_items
 from .utils import get_item_detail
-from django_redis import get_redis_connection
-# 获取默认的 Redis 连接对象
-redis_conn = get_redis_connection("default")
+
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -91,6 +85,7 @@ class ItemAPIView(APIView):
             serializer = serializer_class(data=request.data)
             if serializer.is_valid():
                 serializer.save(owner=request.user, image_src=request.data.get('image_src'))
+                refresh_redis_packages_with_items()
                 return Response(
                     {'result': True, 'message': 'Data saved successfully', 'data': serializer.data, 'errorMsg': ''},
                     status=status.HTTP_201_CREATED)
@@ -105,7 +100,10 @@ class ItemAPIView(APIView):
             model, _ = get_model_and_serializer(type_param)
             obj = model.objects.filter(id=obj_id).first()
             if obj:
-                obj.soft_delete()  # soft delete
+                with transaction.atomic():
+                    obj.soft_delete()  # soft delete
+                    soft_delete_package_item(obj_id, type_param)
+                refresh_redis_packages_with_items()
                 return Response({'result': True, 'message': 'Object soft-deleted successfully'}, status=204)
             else:
                 return Response({'result': False, 'errorMsg': 'This id does not exist'}, status=404)
@@ -121,10 +119,29 @@ class ItemAPIView(APIView):
                 serializer = serializer_class(obj, data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save(owner=request.user)
-                    return Response(serializer.data)
-                return Response(serializer.errors, status=400)
+
+                    package_items = PackageItem.objects.filter(
+                        Q(item_object_id=obj_id) & Q(type=type_param)
+                    )
+                    updated_detail = get_item_detail(type_param, obj)
+
+                    batch_size = 100
+                    for i in range(0, len(package_items), batch_size):
+                        with transaction.atomic():
+                            batch = package_items[i:i + batch_size]
+                            for package_item in batch:
+                                package_item.detail = updated_detail
+                            PackageItem.objects.bulk_update(batch, ['detail'])
+
+                    refresh_redis_packages_with_items()
+                    return Response(
+                        {'result': True, 'message': 'Update successful', 'data': serializer.data, 'errorMsg': None})
+                return Response(
+                    {'result': False, 'message': 'Invalid data', 'data': None, 'errorMsg': serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({'result': False, 'errorMsg': 'This id does not exist'}, status=404)
+                return Response({'result': False, 'message': 'This id does not exist', 'data': None, 'errorMsg': None},
+                                status=status.HTTP_404_NOT_FOUND)
 
     def get(self, request, *args, **kwargs):
         type_param = request.query_params.get('type')
@@ -195,6 +212,7 @@ def add_package(request):
             custom_package.save()
 
             serializer = CustomPackageSerializer(custom_package)
+            refresh_redis_packages_with_items()
             return JsonResponse(
                 {"result": True, "message": "Package added successfully", "data": serializer.data, "errorMsg": ""},
                 status=status.HTTP_200_OK)
@@ -222,17 +240,26 @@ def update_package(request):
 
             # Process items_data if provided
             items_data = data.get('items', [])
-            existing_item_ids = [item.get('id') for item in items_data if item.get('id')]
-            custom_package.packageitem_set.exclude(item_object_id__in=existing_item_ids).delete()
+            given_item_set = {(item['type'], item['id']) for item in items_data}
 
-            for item in items_data:
-                item_id = item.get('id')
-                item_type = item.get('type')
-                number = item.get('number')
+            existing_items = custom_package.packageitem_set.all()
+
+            for item in existing_items:
+                item_type = item.type
+                item_id = item.item_object_id
+                if (item_type, item_id) not in given_item_set:
+                    item.soft_delete()
+
+            # 遍历给定项目列表，更新或创建项目
+            for item_data in items_data:
+                item_id = item_data.get('id')
+                item_type = item_data.get('type')
+                number = item_data.get('number')
 
                 model = get_model_by_item_type(item_type)
                 model_instance = model.objects.get(id=item_id)
 
+                # 更新或创建 PackageItem 对象
                 package_item, created = PackageItem.objects.update_or_create(
                     package=custom_package,
                     item_content_type=ContentType.objects.get_for_model(model),
@@ -240,8 +267,13 @@ def update_package(request):
                     defaults={'quantity': number, 'type': item_type}
                 )
 
+                # 更新项目的详细信息
+                package_item.detail = get_item_detail(item_type, model_instance)
+                package_item.save()
+
             custom_package.save()
             serializer = CustomPackageSerializer(custom_package)
+            refresh_redis_packages_with_items()
             return JsonResponse(
                 {"result": True, "message": "Package updated successfully", "errorMsg": "", "data": serializer.data},
                 status=status.HTTP_200_OK)
@@ -298,6 +330,7 @@ def delete_package(request):
     try:
         obj = CustomPackage.objects.get(id=obj_id)
         obj.soft_delete()  # Assuming soft_delete() marks the is_delete field
+        refresh_redis_packages_with_items()
         return Response({'result': True, 'message': 'Package deleted successfully', 'data': None, 'errorMsg': ""},
                         status=status.HTTP_200_OK)
     except CustomPackage.DoesNotExist:
@@ -308,44 +341,5 @@ def delete_package(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def packages_with_items(request):
-    # start_time = time.time()
-    response_data = cache.get('packages_with_items_data')
-    if response_data:
-        return Response(response_data)
-
-    # Retrieve all packages
-    packages = CustomPackage.objects.prefetch_related('packageitem_set').all()
-    package_serializer = CustomPackageSerializer(packages, many=True)
-
-    # Retrieve all items
-    flight_tickets = FlightTicket.objects.all()
-    hotels = Hotel.objects.all()
-    activities = Activity.objects.all()
-
-    # Serialize all items
-    flight_ticket_serializer = FlightTicketSerializer(flight_tickets, many=True)
-    hotel_serializer = HotelSerializer(hotels, many=True)
-    activity_serializer = ActivitySerializer(activities, many=True)
-    cache.set('flight_tickets', flight_tickets)
-    cache.set('hotels', hotels)
-    cache.set('activities', activities)
-
-    response_data = []
-
-    # Append packages to response data with their details
-    for package_data in package_serializer.data:
-        response_data.append(package_data)
-
-    # Append items to response data
-    for item_data in flight_ticket_serializer.data:
-        response_data.append(item_data)
-
-    for item_data in hotel_serializer.data:
-        response_data.append(item_data)
-
-    for item_data in activity_serializer.data:
-        response_data.append(item_data)
-
-    cache.set('packages_with_items_data', response_data)
-
+    response_data = get_packages_with_items()
     return Response(response_data)

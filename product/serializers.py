@@ -165,17 +165,11 @@ class CustomPackageSerializer(serializers.ModelSerializer):
         return f"Included: {options_str}"
 
     def get_details(self, obj):
-
-        # Check if details are cached
-        cached_details = detail_cache.get_cached_details(obj.id)
-        if cached_details:
-            return cached_details
-
         # Get package features
         features = {
             'name': 'Features',
             'items': obj.features,
-            'type': 'package'
+            'type': 'package',
         }
 
         details = [features]
@@ -184,7 +178,6 @@ class CustomPackageSerializer(serializers.ModelSerializer):
         for item in obj.packageitem_set.all():
             detail_data = item.detail
             if detail_data:
+                detail_data['id'] = item.item_object_id
                 details.append(detail_data)
-        # Cache the details
-        detail_cache.cache_details(obj.id, details)
         return details
