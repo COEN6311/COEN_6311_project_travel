@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password, check_password
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -131,51 +132,41 @@ def deactivate_account(request):
         return Response({'error': 'email or password invalid'}, status=400)
 
 
+
 @api_view(['PUT'])
 def update_profile(request):
-    '''Update user profile information'''
-    new_first_name = request.data.get('first_name')
-    new_last_name = request.data.get('last_name')
-    new_mobile = request.data.get('mobile')
-    new_email = request.data.get('email')
+    '''Update user profile information, include first/last name, mobile, email and password'''
+    update_fields = ['password','email', 'first_name', 'last_name', 'mobile']
+    success_messages = []
+    update_detected = False  # Track if any update is detected
     try:
-        validate_email(new_email)
         user = request.user
-        user.email = new_email
-        User.first_name = new_first_name
-        User.last_name = new_last_name
-        User.mobile = new_mobile
+        for field in update_fields:
+            new_value = request.data.get(field)
+            old_value = getattr(user, field)
+            if field != 'password':
+                if new_value is not None and new_value != old_value:
+                    if field == 'email':
+                        validate_email(new_value)
+                    else:
+                        setattr(user, field, new_value)
+                    success_messages.append(f'{field.capitalize()} updated successfully')
+                    update_detected = True  # Update detected
+            elif field == 'password' and new_value is not None:
+                if not is_strong_password(new_value):
+                    return Response({
+                                'error': 'The password must be at least 8 characters long and contain at least one uppercase letter,'
+                                         ' one lowercase letter, one digit, and one special character (!@#$%^&*).'},status=400)
+                else:
+                    password_same=check_password(new_value, old_value)
+                    if not password_same:
+                        user.set_password(make_password(new_value))
+                        success_messages.append('information changed successfully')
+                        update_detected = True
         user.save()
     except ValidationError:
-        return Response({'error': 'email invalid'}, status=400)
-    return Response({'message': 'information update successfully'})
-
-@api_view(['PUT'])
-def change_password(request):
-    '''change password of user account'''
-    new_password = request.data.get('password')
-    user = request.user
-    if not is_strong_password(new_password):
-        return Response({'The password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character (!@#$%^&*).'}, status=400)
-    elif user.password == new_password:
-        return Response({'message': 'The new and old passwords cannot be the same!'}, status=400)
+        return Response({'error': 'Email invalid'}, status=400)
+    if update_detected:
+        return Response({'message': success_messages})
     else:
-        user.password = new_password
-        user.save()
-        return Response({'message': 'password changed successfully'})
-
-@api_view(['PUT'])
-def change_email(request):
-    '''change email of user account'''
-    user = request.user
-    new_email = request.data.get('email')
-    try:
-        validate_email(new_email)
-        if user.email == new_email:
-            return Response({'message': 'The new and old email cannot be the same!'})
-        else:
-            user.email = new_email
-            user.save()
-    except ValidationError:
-        return Response({'error': 'email invalid'}, status=400)
-    return Response({'message': 'email update successfully'})
+        return Response({'message': 'No update detected'})
