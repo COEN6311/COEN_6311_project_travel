@@ -18,8 +18,10 @@ def send_custom_email(subject, message, recipient_list, from_email=settings.EMAI
             message,
             from_email,
             recipient_list,
+            html_message=message,
+            # html_message=message,
             fail_silently=False,
         )
         print("Email sent successfully.")
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        raise Exception(f"Failed to send email: {e}")
