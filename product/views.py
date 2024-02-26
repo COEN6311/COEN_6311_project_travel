@@ -8,6 +8,8 @@ from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
+
+from cart.cart_service import delete_cart_item
 from user.customPermission import IsAgentPermission
 from .serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
 from rest_framework.response import Response
@@ -103,6 +105,7 @@ class ItemAPIView(APIView):
                 with transaction.atomic():
                     obj.soft_delete()  # soft delete
                     soft_delete_package_item(obj_id, type_param)
+                    delete_cart_item(obj_id, type_param)
                 refresh_redis_packages_with_items()
                 return Response({'result': True, 'message': 'Object soft-deleted successfully'}, status=204)
             else:
@@ -177,45 +180,11 @@ def add_package(request):
         data = json.loads(request.body.decode('utf-8'))
         owner = request.user
         items_data = data.get('items', [])
-
-        with transaction.atomic():
-            custom_package = CustomPackage.objects.create(
-                name=data.get('name'),
-                description=data.get('description'),
-                owner=owner,
-                price=data.get('price', 0),
-                image_src=data.get('image_src'),
-                features=data.get('features')
-            )
-
-            total_price = data.get('price', 0)
-            for item_data in items_data:
-                item_type = item_data.get('type')
-                item_id = item_data.get('id')
-                quantity = item_data.get('number')
-
-                model = get_model_by_item_type(item_type)
-                model_instance = model.objects.get(id=item_id)
-                item_price = model_instance.price * quantity
-                total_price += item_price
-
-                PackageItem.objects.create(
-                    package=custom_package,
-                    item_content_type=ContentType.objects.get_for_model(model),
-                    item_object_id=item_id,
-                    quantity=quantity,
-                    type=item_type,
-                    detail=get_item_detail(item_type, model_instance)
-                )
-
-            custom_package.price = total_price
-            custom_package.save()
-
-            serializer = CustomPackageSerializer(custom_package)
-            refresh_redis_packages_with_items()
-            return JsonResponse(
-                {"result": True, "message": "Package added successfully", "data": serializer.data, "errorMsg": ""},
-                status=status.HTTP_200_OK)
+        custom_package = insert_package(data, owner, items_data)
+        serializer = CustomPackageSerializer(custom_package)
+        return JsonResponse(
+            {"result": True, "message": "Package added successfully", "data": serializer.data, "errorMsg": ""},
+            status=status.HTTP_200_OK)
     except Exception as e:
         return JsonResponse({"result": False, "message": "", "errorMsg": str(e), "data": None},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -343,3 +312,41 @@ def delete_package(request):
 def packages_with_items(request):
     response_data = get_packages_with_items()
     return Response(response_data)
+
+
+def insert_package(data, owner, items_data):
+    with transaction.atomic():
+        custom_package = CustomPackage.objects.create(
+            name=data.get('name', ' '),
+            description=data.get('description', ' '),
+            owner=owner,
+            price=data.get('price', 0),
+            image_src=data.get('image_src'),
+            is_user=not owner.is_agent,
+            features=data.get('features', [])
+        )
+
+        total_price = data.get('price', 0)
+        for item_data in items_data:
+            item_type = item_data.get('type')
+            item_id = item_data.get('id')
+            quantity = item_data.get('number')
+
+            model = get_model_by_item_type(item_type)
+            model_instance = model.objects.get(id=item_id)
+            item_price = model_instance.price * quantity
+            total_price += item_price
+
+            PackageItem.objects.create(
+                package=custom_package,
+                item_content_type=ContentType.objects.get_for_model(model),
+                item_object_id=item_id,
+                quantity=quantity,
+                type=item_type,
+                detail=get_item_detail(item_type, model_instance)
+            )
+
+        custom_package.price = total_price
+        custom_package.save()
+        refresh_redis_packages_with_items()
+        return custom_package

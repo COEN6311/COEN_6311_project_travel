@@ -1,12 +1,14 @@
 import json
 import threading
 
+
+
 from ..contans import redis_key_packages_with_items_data, redis_expire_packages_with_items_data
 from ..serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
 from ..models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity
-import asyncio
 
 from utils.redis_connect import redis_client
+
 
 
 def service_refresh_redis_packages_with_items():
@@ -24,8 +26,8 @@ def get_packages_with_items():
     if cached_data:
         return json.loads(cached_data)
 
-    # Retrieve all packages
-    packages = CustomPackage.objects.prefetch_related('packageitem_set').all()
+    # Retrieve all packages  is_user=False prevent select user own package
+    packages = CustomPackage.objects.filter(is_user=False).prefetch_related('packageitem_set').all()
     package_serializer = CustomPackageSerializer(packages, many=True)
 
     # Retrieve all items
