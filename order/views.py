@@ -39,8 +39,9 @@ def place_order(request):
             order_detail = []
             for packageItem in package_items:
                 item = packageItem.item
-                item_map[user.id].append(item)
-                agent_map[user.id] = item.owner
+                user_id = item.owner.id
+                item_map[user_id].append(item)
+                agent_map[user_id] = item.owner
                 order_detail.append(packageItem.detail)
             user_order_price = calculate_price_taxed(package.price)
             user_order_number = generate_random_number()

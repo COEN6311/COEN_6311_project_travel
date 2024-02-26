@@ -149,8 +149,8 @@ def register_handle(request):
                     # redis_client.set(click_token, 'clicked')
 
                     # Poll Redis for click sign
-                    if not poll_redis_for_click_sign(click_token):
-                        raise EmailValidationTimeOut
+                    # if not poll_redis_for_click_sign(click_token):
+                    #     raise EmailValidationTimeOut
                     User.objects.create_user( password=password, email=email)
                     user = authenticate(request, username=email, password=password)
                     if user is not None:
