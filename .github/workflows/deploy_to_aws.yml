@@ -18,10 +18,12 @@ jobs:
         key: ${{ secrets.DEPLOY_KEY }}
         script: |
           cd /usr/COEN_6311_project_travel
+          git reset --hard
           git pull
           source venv/bin/activate
           pip install -r requirements.txt
-          python manage.py migrate
+          python manage.py makemigrations
+          python manage.py migrate 
           python manage.py collectstatic --noinput
           uwsgi --ini uwsgi.ini
         
