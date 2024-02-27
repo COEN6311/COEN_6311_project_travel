@@ -9,16 +9,15 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
+import logging
 import os
 from pathlib import Path
 import pymysql
-
 
 pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -30,7 +29,6 @@ SECRET_KEY = 'django-insecure-vm-=#_91ku4p=7rpqkfx6ngs400g)yi68c2(5ry6m1!lha^)67
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -80,7 +78,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'COEN_6311_project_travel.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -100,7 +97,6 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -119,7 +115,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
@@ -131,13 +126,10 @@ TIME_ZONE = 'America/New_York'
 
 USE_I18N = True
 
-
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -168,19 +160,18 @@ REST_FRAMEWORK = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
 RABBITMQ_HOST = '13.59.139.10'
 RABBITMQ_PORT = 5672
 RABBITMQ_VIRTUAL_HOST = '/'
 RABBITMQ_USERNAME = 'admin'
 RABBITMQ_PASSWORD = 'admin'
 
-
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
+# 日志配置
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -190,18 +181,24 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
+        'file_info': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOG_DIR, 'info.log'),
             'formatter': 'standard',
         },
+        'file_error': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'error.log'),
+            'formatter': 'standard',
+        },
     },
     'loggers': {
         '': {
-            'handlers': ['file'],
+            'handlers': ['file_info', 'file_error'],  # 添加两个处理器
             'level': 'INFO',
             'propagate': True,
         },
-    },
+    }
 }

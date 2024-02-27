@@ -1,4 +1,3 @@
-import decimal
 import json
 from collections import defaultdict
 
@@ -38,7 +37,7 @@ def place_order(request):
             agent_map = defaultdict(User)
             current_time = timezone.now()
 
-            # 获取关联的 Item
+            # get Item
             package_items = package.packageitem_set.all()
             order_detail = []
             for packageItem in package_items:
@@ -94,7 +93,7 @@ def place_order(request):
             json_string = json.dumps(data)
             print(json_string)
             send_auto_order_cancel(json_string)
-            logger.info("generate and order,order_number:"+user_order_number)
+            logger.info("generate and order,order_number:" + user_order_number)
         return JsonResponse(
             {'result': True, 'data': {'order_number': user_order_number}, 'message': 'Order placed successfully'},
             status=201)
