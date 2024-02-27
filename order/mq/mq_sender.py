@@ -6,7 +6,7 @@ import json
 
 from order.mq.get_connection import get_rabbitmq_connection
 
-auto_order_cancel_delay = 60
+auto_order_cancel_delay = 10
 auto_order_cancel_exchange = 'auto_order_cancel_exchange_1'
 auto_order_cancel_queue = 'auto_order_cancel_queue_1'
 

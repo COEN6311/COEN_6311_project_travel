@@ -1,11 +1,9 @@
 import decimal
-import json
-from urllib import request
+
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, transaction
 from rest_framework.decorators import api_view
-
 from django.http import JsonResponse
 from cart.models import CartItem, Cart
 from cart.serializers import CartSerializer
@@ -15,6 +13,8 @@ from product.views import get_model_by_item_type, insert_package
 from user.models import User
 from utils.constant import tax_rate
 
+import logging
+logger = logging.getLogger(__name__)
 
 @api_view(["POST"])
 def add_item(request):
