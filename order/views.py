@@ -2,17 +2,21 @@ import decimal
 import json
 from collections import defaultdict
 
+from django.core.serializers import serialize
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from rest_framework.decorators import api_view
 
 from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder
+from order.mq.mq_sender import send_auto_order_cancel
 from product.models import CustomPackage
 from user.models import User
 from utils.constant import tax_rate
 from utils.number_util import generate_random_number, calculate_price_taxed
+from utils.times import time_format
 
 
 # Create your views here.
@@ -33,6 +37,7 @@ def place_order(request):
                 return JsonResponse({'result': False, 'errorMsg': 'Package not found'}, status=404)
             item_map = defaultdict(list)
             agent_map = defaultdict(User)
+            current_time = timezone.now()
 
             # 获取关联的 Item
             package_items = package.packageitem_set.all()
@@ -83,7 +88,14 @@ def place_order(request):
                     email=email,
                     status=OrderStatus.PENDING_PAYMENT.value  #
                 )
-
+            # 创建包含指定属性的字典
+            data = {
+                'order_number': user_order.order_number,
+                'order_time': str(user_order.create_time)  # ISO 8601
+            }
+            json_string = json.dumps(data)
+            print(json_string)
+            send_auto_order_cancel(json_string)
         return JsonResponse(
             {'result': True, 'data': {'order_number': user_order_number}, 'message': 'Order placed successfully'},
             status=201)

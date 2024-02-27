@@ -125,13 +125,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-USE_TZ = True
+USE_TZ = False
 
 TIME_ZONE = 'America/New_York'
 
 USE_I18N = True
 
-USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -169,4 +168,10 @@ REST_FRAMEWORK = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+
+RABBITMQ_HOST = '13.59.139.10'
+RABBITMQ_PORT = 5672
+RABBITMQ_VIRTUAL_HOST = '/'
+RABBITMQ_USERNAME = 'admin'
+RABBITMQ_PASSWORD = 'admin'
 

@@ -141,7 +141,9 @@ def register_handle(request):
                     errorMsg = 'The email already exists!'
                 else:
                     '''If everything above is fine, do registration and login'''
-                    #向用户发送邮件，包含一确认链接，同时开始检测用户是否点击链接，如已点击，继续注册，否则抛出一个异常，异常信息为“link timeout”
+                    # Send  email to the user containing a confirmation link, and start checking whether the
+                    # user clicks the link. If clicked, proceed with registration; otherwise,
+                    # raise an exception with the message "link timeout".
                     click_token = email
                     # Send verification email to the user
                     send_verification_email(email, click_token)
@@ -149,8 +151,8 @@ def register_handle(request):
                     # redis_client.set(click_token, 'clicked')
 
                     # Poll Redis for click sign
-                    # if not poll_redis_for_click_sign(click_token):
-                    #     raise EmailValidationTimeOut
+                    if not poll_redis_for_click_sign(click_token):
+                        raise EmailValidationTimeOut
                     User.objects.create_user( password=password, email=email)
                     user = authenticate(request, username=email, password=password)
                     if user is not None:
