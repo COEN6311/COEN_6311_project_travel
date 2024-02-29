@@ -35,7 +35,7 @@ class AgentOrder(Order):
 
 
 class Payment(BaseModel):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments_orders')
+    order = models.ForeignKey(UserOrder, on_delete=models.CASCADE, related_name='payments_user_orders')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments_users')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_time = models.DateTimeField(blank=True, null=True)

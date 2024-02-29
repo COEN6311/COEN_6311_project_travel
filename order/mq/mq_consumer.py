@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def expireOrderCallback(ch, method, properties, body):
+def expire_order_callback(ch, method, properties, body):
     # data = '{"order_number": "92297759374073086834", "order_time": "2024-02-27 16:53:51.253304"}'
     logger.info("Received message from Queue 1:" + body.decode())
     parsed_data = json.loads(body.decode())
@@ -37,7 +37,7 @@ def start_consumer():
     connection = get_rabbitmq_connection()
     channel = connection.channel()
     # channel.queue_declare(queue=auto_order_cancel_queue)
-    channel.basic_consume(queue=auto_order_cancel_queue, on_message_callback=expireOrderCallback, auto_ack=True)
+    channel.basic_consume(queue=auto_order_cancel_queue, on_message_callback=expire_order_callback, auto_ack=True)
     # channel.queue_declare(queue='queue2')
     #
     # channel.basic_consume(queue='queue2', on_message_callback=callback2, auto_ack=True)

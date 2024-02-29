@@ -1,5 +1,6 @@
 import json
 from collections import defaultdict
+from decimal import Decimal
 
 from django.db import transaction
 from django.http import JsonResponse
@@ -7,8 +8,9 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 
 from order.constant import OrderStatus
-from order.models import UserOrder, AgentOrder
+from order.models import UserOrder, AgentOrder, Payment
 from order.mq.mq_sender import send_auto_order_cancel
+from order.service.payment_service import handle_payment
 from product.models import CustomPackage
 from user.models import User
 from utils.number_util import generate_random_number, calculate_price_taxed
@@ -26,26 +28,44 @@ def payment_order(request):
             card_number = data.get('card_number')
             security_code = data.get('security_code')
             amount = data.get('amount')
+            user = request.user
+            if not all([order_number, card_number, security_code, amount]):
+                return JsonResponse({'result': False, 'errorMsg': 'One or more required fields are missing.'},
+                                    status=400)
 
             user_order = UserOrder.objects.filter(order_number=order_number,
                                                   status=OrderStatus.PENDING_PAYMENT.value).first()
             if not user_order:
                 logger.info("order need not payment handle,order:" + order_number)
                 return JsonResponse({'result': False,
-                                     'errorMsg': 'Order does not exist or the order has already been paid."'},
+                                     'errorMsg': 'Order does not exist or the order has already been paid.'},
                                     status=400)
+            if user_order.price != Decimal(amount):
+                return JsonResponse({'result': False, 'message': 'Invalid payment amount.'}, status=400)
             agent_orders = AgentOrder.objects.filter(user_order=user_order)
+            # pending payment transfer to pending departure or travelling
+            if not handle_payment(card_number, security_code, amount):
+                return JsonResponse({'result': False, 'message': 'payment failed.'}, status=400)
+            payment_time = timezone.now()
+            order_status = OrderStatus.PENDING_DEPARTURE.value
+            if payment_time.date() == user_order.departure_date:
+                order_status = OrderStatus.TRAVELING.value
             with transaction.atomic():
-                user_order.soft_delete()
+                payment = Payment.objects.create(
+                    order=user_order,
+                    user=user,
+                    amount=amount,
+                    payment_time=payment_time
+                )
+                user_order.status = order_status
+                user_order.payment_time = payment_time
+                user_order.save()
                 for agent_order in agent_orders:
-                    agent_order.soft_delete()
-                logger.info("order expire handled,order:" + order_number)
-
-            if order_number is None or card_number is None or security_code is None:
-                return JsonResponse({'result': False, 'message': 'Invalid JSON format. Missing required fields.'},
-                                    status=400)
-
-            return JsonResponse({'result': True, 'message': 'Order placed successfully.'})
+                    agent_order.status = order_status
+                    agent_order.payment_time = payment_time
+                    agent_order.save()
+                logger.info("order payment successfully:" + order_number)
+            return JsonResponse({'result': True, 'message': 'Order payment successfully.'})
         except json.JSONDecodeError:
             return JsonResponse({'result': False, 'errorMsg': 'Invalid JSON format.'}, status=400)
         except Exception as e:
@@ -132,7 +152,10 @@ def place_order(request):
             send_auto_order_cancel(json_string)
             logger.info("generate and order,order_number:" + user_order_number)
         return JsonResponse(
-            {'result': True, 'data': {'order_number': user_order_number}, 'message': 'Order placed successfully'},
+            {'result': True, 'data': {
+                'order_number': user_order_number,
+                'amount': user_order_price
+            }, 'message': 'Order placed successfully'},
             status=201)
 
     except Exception as e:
