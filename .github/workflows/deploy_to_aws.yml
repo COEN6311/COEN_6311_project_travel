@@ -20,6 +20,7 @@ jobs:
           cd /usr/COEN_6311_project_travel
           git reset --hard
           git pull
+          killall -s INT uwsgi
           source venv/bin/activate
           pip install -r requirements.txt
           python manage.py collectstatic --noinput
