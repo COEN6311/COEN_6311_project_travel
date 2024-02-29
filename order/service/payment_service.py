@@ -1,4 +1,4 @@
-def payment(card_number, security_code, amount):
+def handle_payment(card_number, security_code, amount):
     # todo real payment
     result = True
 
