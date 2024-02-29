@@ -34,13 +34,16 @@ def expire_order_callback(ch, method, properties, body):
 #     # 处理队列2的消息
 
 def start_consumer():
-    connection = get_rabbitmq_connection()
-    channel = connection.channel()
-    # channel.queue_declare(queue=auto_order_cancel_queue)
-    channel.basic_consume(queue=auto_order_cancel_queue, on_message_callback=expire_order_callback, auto_ack=True)
-    # channel.queue_declare(queue='queue2')
-    #
-    # channel.basic_consume(queue='queue2', on_message_callback=callback2, auto_ack=True)
-    logger.info('Consumer started. Waiting for messages...')
+    try:
+        connection = get_rabbitmq_connection()
+        channel = connection.channel()
+        # channel.queue_declare(queue=auto_order_cancel_queue)
+        channel.basic_consume(queue=auto_order_cancel_queue, on_message_callback=expire_order_callback, auto_ack=True)
+        # channel.queue_declare(queue='queue2')
+        #
+        # channel.basic_consume(queue='queue2', on_message_callback=callback2, auto_ack=True)
+        logger.info('Consumer started. Waiting for messages...')
 
-    channel.start_consuming()
+        channel.start_consuming()
+    except Exception as e:
+        logger.error("error:"+str(e))
