@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'user',
     'order',
     'product',
+    'django_crontab',
     'uploadapp',
     'cart',
     'rest_framework.authtoken',
