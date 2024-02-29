@@ -41,6 +41,6 @@ def start_consumer():
     # channel.queue_declare(queue='queue2')
     #
     # channel.basic_consume(queue='queue2', on_message_callback=callback2, auto_ack=True)
-    print('Consumer started. Waiting for messages...')
+    logger.info('Consumer started. Waiting for messages...')
 
     channel.start_consuming()

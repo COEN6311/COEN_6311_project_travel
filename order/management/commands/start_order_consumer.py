@@ -1,11 +1,11 @@
 from django.core.management import BaseCommand
 
-from order.mq.mq_consumer import start_consumer
+from order.mq.mq_consumer import start_consumer, logger
 
 
 class Command(BaseCommand):
     help = 'Starts the order consumer'
 
     def handle(self, *args, **options):
-        print("Starts the order consumer!!!")
+        logger.info("Starts the order consumer!!!")
         start_consumer()
