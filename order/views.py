@@ -17,6 +17,43 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@api_view(["POST"])
+def payment_order(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            order_number = data.get('order_number')
+            card_number = data.get('card_number')
+            security_code = data.get('security_code')
+            amount = data.get('amount')
+
+            user_order = UserOrder.objects.filter(order_number=order_number,
+                                                  status=OrderStatus.PENDING_PAYMENT.value).first()
+            if not user_order:
+                logger.info("order need not payment handle,order:" + order_number)
+                return JsonResponse({'result': False,
+                                     'errorMsg': 'Order does not exist or the order has already been paid."'},
+                                    status=400)
+            agent_orders = AgentOrder.objects.filter(user_order=user_order)
+            with transaction.atomic():
+                user_order.soft_delete()
+                for agent_order in agent_orders:
+                    agent_order.soft_delete()
+                logger.info("order expire handled,order:" + order_number)
+
+            if order_number is None or card_number is None or security_code is None:
+                return JsonResponse({'result': False, 'message': 'Invalid JSON format. Missing required fields.'},
+                                    status=400)
+
+            return JsonResponse({'result': True, 'message': 'Order placed successfully.'})
+        except json.JSONDecodeError:
+            return JsonResponse({'result': False, 'errorMsg': 'Invalid JSON format.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'result': False, 'errorMsg': str(e)}, status=500)
+    else:
+        return JsonResponse({'result': False, 'errorMsg': 'Only POST requests are allowed.'}, status=405)
+
+
 # Create your views here.
 @api_view(["POST"])
 def place_order(request):
