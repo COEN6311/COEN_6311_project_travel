@@ -1,5 +1,5 @@
 from django.core.management import BaseCommand
-
+import threading
 from order.mq.mq_consumer import start_consumer
 
 
@@ -8,4 +8,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         print("Starts the order consumer!!!")
-        start_consumer()
+
+        # 定义一个新的线程
+        consumer_thread = threading.Thread(target=start_consumer)
+
+        # 启动线程
+        consumer_thread.start()
