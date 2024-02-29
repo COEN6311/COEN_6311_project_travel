@@ -25,4 +25,5 @@ jobs:
           pip install -r requirements.txt
           python manage.py collectstatic --noinput
           uwsgi --ini uwsgi.ini
+          nohup python manage.py start_order_consumer 
         
