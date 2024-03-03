@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.decorators import api_view
 
 from order import task
@@ -168,7 +169,6 @@ def place_order(request):
 
 @api_view(['GET'])
 def view_orders(request):
-
     try:
         owner = request.user
         is_user = not owner.is_agent
@@ -198,3 +198,30 @@ def view_orders(request):
     except Exception as e:
         logger.exception("An error occurred: %s", e)
         return JsonResponse({'result': False, 'errorMsg': 'system error'}, status=404)
+
+
+@api_view(['POST'])
+def cancel_order(request):
+    order_number = request.data.get('order_number')
+    if not order_number:
+        return JsonResponse({'result': False, 'errorMsg': 'Please provide order number', 'message': "", 'data': None},
+                            status=status.HTTP_400_BAD_REQUEST)
+    try:
+        user_order = UserOrder.objects.prefetch_related('agent_orders').get(order_number=order_number)
+        with transaction.atomic():
+            user_order.status = OrderStatus.CANCELLED.value
+            user_order.save()
+
+            for agent_order in user_order.agent_orders.all():
+                agent_order.status = OrderStatus.CANCELLED.value
+                agent_order.save()
+        logger.info(f'Order {order_number} successfully cancelled')
+        return JsonResponse({'result': True, 'message': 'Order successfully cancelled'}, status=status.HTTP_200_OK)
+    except UserOrder.DoesNotExist:
+        logger.error(f'Order {order_number} does not exist')
+        return JsonResponse({'result': False, 'errorMsg': 'Order does not exist', 'message': "", 'data': None},
+                            status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.exception('An error occurred while cancelling the order')
+        return JsonResponse({'result': False, 'errorMsg': str(e), 'message': "", 'data': None},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)

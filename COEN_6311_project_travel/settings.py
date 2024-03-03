@@ -198,7 +198,7 @@ LOGGING = {
     },
     'loggers': {
         '': {
-            'handlers': ['file_info', 'file_error'],  # 添加两个处理器
+            'handlers': ['file_info', 'file_error'],  # two handler
             'level': 'INFO',
             'propagate': True,
         },
