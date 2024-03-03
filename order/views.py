@@ -50,8 +50,8 @@ def payment_order(request):
                 return JsonResponse({'result': False, 'message': 'payment failed.'}, status=400)
             payment_time = timezone.now()
             order_status = OrderStatus.PENDING_DEPARTURE.value
-            if payment_time.date() == user_order.departure_date:
-                order_status = OrderStatus.TRAVELING.value
+            # if payment_time.date() == user_order.departure_date:
+            #     order_status = OrderStatus.TRAVELING.value
             with transaction.atomic():
                 payment = Payment.objects.create(
                     order=user_order,
@@ -168,7 +168,6 @@ def place_order(request):
 
 @api_view(['GET'])
 def view_orders(request):
-    result = tasks.test.delay()
 
     try:
         owner = request.user
