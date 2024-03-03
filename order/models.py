@@ -15,7 +15,7 @@ class Order(BaseModel):
     departure_date = models.DateField()
     payment_time = models.DateTimeField(blank=True, null=True)
     end_date = models.DateField()
-    created_date = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    created_date = models.DateField(auto_now_add=True, blank=True, null=True)
 
     class Meta:
         abstract = True

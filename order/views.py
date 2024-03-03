@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view
 from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
 from order.mq.mq_sender import send_auto_order_cancel
+from order.serializers import UserOrderSerializer, AgentOrderSerializer
 from order.service.payment_service import handle_payment
 from product.models import CustomPackage
 from user.models import User
@@ -69,6 +70,7 @@ def payment_order(request):
         except json.JSONDecodeError:
             return JsonResponse({'result': False, 'errorMsg': 'Invalid JSON format.'}, status=400)
         except Exception as e:
+            logger.exception("An error occurred: %s", e)
             return JsonResponse({'result': False, 'errorMsg': str(e)}, status=500)
     else:
         return JsonResponse({'result': False, 'errorMsg': 'Only POST requests are allowed.'}, status=405)
@@ -159,4 +161,38 @@ def place_order(request):
             status=201)
 
     except Exception as e:
+        logger.exception("An error occurred: %s", e)
+        return JsonResponse({'result': False, 'errorMsg': 'system error'}, status=404)
+
+
+@api_view(['GET'])
+def view_orders(request):
+    try:
+        owner = request.user
+        is_user = not owner.is_agent
+        if is_user:
+            orders = UserOrder.objects.filter(user=owner)
+            serializer = UserOrderSerializer(orders, many=True)
+            response_data = {
+                'result': 'success',
+                'message': 'Orders retrieved successfully',
+                'errorMsg': None,
+                'data': serializer.data
+            }
+        else:
+            orders = AgentOrder.objects.filter(agent=owner)
+            serializer = AgentOrderSerializer(orders, many=True)
+            response_data = {
+                'result': 'success',
+                'message': 'Orders retrieved successfully',
+                'errorMsg': None,
+                'data': serializer.data
+            }
+        # build log info
+        log_serialized_data = json.dumps(serializer.data, indent=2)
+        log_message = f"View orders for user {owner.id}:\n{log_serialized_data}"
+        logger.info(log_message)
+        return JsonResponse(response_data)
+    except Exception as e:
+        logger.exception("An error occurred: %s", e)
         return JsonResponse({'result': False, 'errorMsg': 'system error'}, status=404)
