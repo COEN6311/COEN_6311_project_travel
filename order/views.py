@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view
 
-from order import tasks
+from order import task
 from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
 from order.mq.mq_sender import send_auto_order_cancel
