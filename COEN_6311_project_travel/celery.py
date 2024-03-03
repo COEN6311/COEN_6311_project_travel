@@ -15,17 +15,22 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'schedule_task': {  # 随便取名字
-        'task': 'order.task.schedule_task',  # 指定需要定时的任务
-        'schedule': crontab(),  # 删除就可以了 可以点进去这个方法看 都是*
+    # 'schedule_task': {
+    #     'task': 'order.task.schedule_task',
+    #     'schedule': crontab(),
+    # },
+    'change_order_status_task': {
+        'task': 'order.task.change_order_status_task',
+        # 1 time per day
+        'schedule': crontab(hour=0, minute=1),
     },
 }
+
 
 # 一个测试任务
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request')
-
 
     # celery -A COEN_6311_project_travel  worker -l info -f logs/cerely.info -P threads
     # celery -A COEN_6311_project_travel  beat -l info -f logs/celery.log
