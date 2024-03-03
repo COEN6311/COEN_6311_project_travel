@@ -204,3 +204,6 @@ LOGGING = {
         },
     }
 }
+CELERY_BROKER_URL = "redis://13.59.139.10:6379/0"
+
+CELERY_TIMEZONE = 'America/New_York'
