@@ -190,9 +190,7 @@ def view_orders(request):
                 'errorMsg': None,
                 'data': serializer.data
             }
-        # build log info
-        log_serialized_data = json.dumps(serializer.data, indent=2)
-        log_message = f"View orders for user {owner.id}:\n{log_serialized_data}"
+        log_message = f"View orders for user {owner.id}: {len(serializer.data)}"
         logger.info(log_message)
         return JsonResponse(response_data)
     except Exception as e:
@@ -208,6 +206,10 @@ def cancel_order(request):
                             status=status.HTTP_400_BAD_REQUEST)
     try:
         user_order = UserOrder.objects.prefetch_related('agent_orders').get(order_number=order_number)
+        if user_order.status == OrderStatus.CANCELLED.value:
+            logger.info(f'Order {order_number} is already cancelled')
+            return JsonResponse({'result': True, 'message': 'Order is already cancelled'}, status=status.HTTP_200_OK)
+
         with transaction.atomic():
             user_order.status = OrderStatus.CANCELLED.value
             user_order.save()
