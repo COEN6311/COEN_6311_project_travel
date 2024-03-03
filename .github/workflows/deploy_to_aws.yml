@@ -26,12 +26,8 @@ jobs:
           python manage.py collectstatic --noinput
           uwsgi --ini uwsgi.ini
           nohup python manage.py start_order_consumer > start_order_consumer.log 2>&1 &
-    - name: Start Celery Worker
-      run: nohup celery -A COEN_6311_project_travel worker -l info -f logs/celery_worker.log -P threads > celery_worker.log 2>&1 &
-
-    - name: Start Celery Beat
-      run: nohup celery -A COEN_6311_project_travel beat -l info -f logs/celery_beat.log > celery_beat.log 2>&1 &
-
+          nohup celery -A COEN_6311_project_travel worker -l info -f logs/celery_worker.log -P threads > celery_worker.log 2>&1 &
+          nohup celery -A COEN_6311_project_travel beat -l info -f logs/celery_beat.log > celery_beat.log 2>&1 &
 
 
 
