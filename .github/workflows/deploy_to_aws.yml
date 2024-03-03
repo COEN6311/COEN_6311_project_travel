@@ -21,6 +21,7 @@ jobs:
           git reset --hard
           git pull
           killall -s INT uwsgi
+          killall -s INT celery
           source venv/bin/activate
           pip install -r requirements.txt
           python manage.py collectstatic --noinput
