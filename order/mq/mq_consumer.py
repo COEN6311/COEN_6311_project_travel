@@ -13,20 +13,23 @@ logger = logging.getLogger(__name__)
 
 
 def expire_order_callback(ch, method, properties, body):
-    # data = '{"order_number": "92297759374073086834", "order_time": "2024-02-27 16:53:51.253304"}'
-    logger.info("Received message from Queue 1:" + body.decode())
-    parsed_data = json.loads(body.decode())
-    order_number = parsed_data.get("order_number")
+    try:
+        # data = '{"order_number": "92297759374073086834", "order_time": "2024-02-27 16:53:51.253304"}'
+        logger.info("Received message from Queue 1:" + body.decode())
+        parsed_data = json.loads(body.decode())
+        order_number = parsed_data.get("order_number")
 
-    user_order = UserOrder.objects.filter(order_number=order_number, status=OrderStatus.PENDING_PAYMENT.value).first()
-    if not user_order:
-        logger.info("order need not expire handle")
-    agent_orders = AgentOrder.objects.filter(user_order=user_order)
-    with transaction.atomic():
-        user_order.soft_delete()
-        for agent_order in agent_orders:
-            agent_order.soft_delete()
-        logger.info("order expire handled,order:" + order_number)
+        user_order = UserOrder.objects.filter(order_number=order_number, status=OrderStatus.PENDING_PAYMENT.value).first()
+        if not user_order:
+            logger.info("order need not expire handle")
+        agent_orders = AgentOrder.objects.filter(user_order=user_order)
+        with transaction.atomic():
+            user_order.soft_delete()
+            for agent_order in agent_orders:
+                agent_order.soft_delete()
+            logger.info("order expire handled,order:" + order_number)
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
 
 
 # def callback2(ch, method, properties, body):
