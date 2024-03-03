@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view
 
+from order import tasks
 from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
 from order.mq.mq_sender import send_auto_order_cancel
@@ -167,6 +168,8 @@ def place_order(request):
 
 @api_view(['GET'])
 def view_orders(request):
+    result = tasks.test.delay()
+
     try:
         owner = request.user
         is_user = not owner.is_agent
