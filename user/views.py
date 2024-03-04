@@ -8,9 +8,9 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import logout
-import time
 from user.serializers import UserSerializer
-from user.service.send_emaill import send_verification_email, EmailValidationTimeOut
+from user.service.send_emaill import send_verification_email, EmailValidationTimeOut, \
+    send_verification_email_and_validate
 from user.utils import is_strong_password
 from utils.redis_connect import redis_client
 import logging
@@ -20,22 +20,11 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def confirm_registration(request):
+def confirm_email_click(request):
     click_sign = request.GET.get('click_sign')
-    # 存储click_sign到Redis
+    # save click_sign into Redis
     redis_client.set(click_sign, click_sign, 90)
     return Response({'You have confirmed. Please proceed with further actions on the platform.'})
-
-
-def poll_redis_for_click_sign(email):
-    # Poll Redis for click sign
-    for _ in range(60):
-        click_sign = redis_client.get(email)
-        if click_sign is not None:
-            return True
-        else:
-            time.sleep(1)  # Wait for 1 second before next polling
-    return False
 
 
 '''Enable user login'''
@@ -102,20 +91,7 @@ def register_handle(request):
                 if User.objects.filter(email=email).exists():
                     errorMsg = 'The email already exists!'
                 else:
-                    '''If everything above is fine, do registration and login'''
-                    # Send  email to the user containing a confirmation link, and start checking whether the
-                    # user clicks the link. If clicked, proceed with registration; otherwise,
-                    # raise an exception with the message "link timeout".
-                    click_token = email
-                    # Send verification email to the user
-                    send_verification_email(email, click_token)
-                    # Store click token in Redis to track user's verification status
-                    # redis_client.set(click_token, 'clicked')
-                    # Poll Redis for click sign
-                    # todo debug skip_verify
-                    if skip_verify != '1':
-                        if not poll_redis_for_click_sign(click_token):
-                            raise EmailValidationTimeOut
+                    send_verification_email_and_validate(email, skip_verify)
                     user_data = {'password': password, 'email': email}
                     if first_name:
                         user_data['first_name'] = first_name
@@ -165,9 +141,10 @@ def user_logout(request):
         token = request.auth
         token.delete()
     except (AttributeError, Token.DoesNotExist):
-        return Response({'message': 'AttributeError'})
+        return Response({'result': False, 'errorMsg': 'AttributeError'})
     logout(request)
-    return Response({'message': 'You have been logged out successfully.', 'redirect_to': 'homepage'})
+    return Response(
+        {'result': True, 'message': 'You have been logged out successfully.'})
 
 
 @api_view(['POST'])
@@ -175,28 +152,32 @@ def deactivate_account(request):
     '''Deactivate user account'''
     email = request.data.get('email')
     password = request.data.get('password')
-    # Verify the email and password
+    skip_verify = request.data.get('skip_verify', '0')
     user = authenticate(request, username=email, password=password)
     if user is not None:
         try:
+            send_verification_email_and_validate(email, skip_verify)
             user = User.objects.get(email=email)
             user.is_active = False
             user.save()
-            return Response({'message': 'User account deactivated successfully', 'redirect_to': 'homepage'})
+            return Response(
+                {'result': True, 'message': 'User account deactivated successfully'})
         except User.DoesNotExist:
-            return Response({'error': 'User not found with the provided email'}, status=404)
+            return Response({'result': False, 'errorMsg': 'User not found with the provided email'}, status=404)
     else:
-        return Response({'error': 'email or password invalid'}, status=400)
+        return Response({'result': False, 'errorMsg': 'email or password invalid'}, status=400)
 
 
-@api_view(['PUT'])
+@api_view(['POST'])
 def update_profile(request):
     '''Update user profile information, include first/last name, mobile, email and password'''
     update_fields = ['password', 'email', 'first_name', 'last_name', 'mobile']
     success_messages = []
     update_detected = False  # Track if any update is detected
+    skip_verify = request.data.get('skip_verify', '0')
     try:
         user = request.user
+        send_verification_email_and_validate(user.email, skip_verify)
         for field in update_fields:
             new_value = request.data.get(field)
             old_value = getattr(user, field)
@@ -211,18 +192,23 @@ def update_profile(request):
             elif field == 'password' and new_value is not None:
                 if not is_strong_password(new_value):
                     return Response({
-                        'error': 'The password must be at least 8 characters long and contain at least one uppercase letter,'
-                                 ' one lowercase letter, one digit, and one special character (!@#$%^&*).'}, status=400)
+                        'result': False,
+                        'errorMsg': 'The password must be at least 8 characters long and contain at least '
+                                    'one uppercase letter,one lowercase letter, one digit, '
+                                    'and one special character (!@#$%^&*).'}, status=400)
                 else:
                     password_same = check_password(new_value, old_value)
                     if not password_same:
                         user.set_password(make_password(new_value))
-                        success_messages.append('information changed successfully')
+                        success_messages.append('Password changed successfully')
                         update_detected = True
         user.save()
     except ValidationError:
-        return Response({'error': 'Email invalid'}, status=400)
+        return Response({'result': False, 'errorMsg': 'Email invalid'}, status=400)
+    except EmailValidationTimeOut as e:
+        logger.exception(e)
+        return Response({'result': False, 'errorMsg': 'Email validation timed out'}, status=400)
     if update_detected:
-        return Response({'message': success_messages})
+        return Response({'result': True, 'message': success_messages})
     else:
-        return Response({'message': 'No update detected'})
+        return Response({'result': True, 'message': 'No update detected'})
