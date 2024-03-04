@@ -1,6 +1,8 @@
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
 
+logger = logging.getLogger(__name__)
 
 def send_custom_email(subject, message, recipient_list, from_email=settings.EMAIL_HOST_USER):
     """
@@ -13,6 +15,7 @@ def send_custom_email(subject, message, recipient_list, from_email=settings.EMAI
     :return: None
     """
     try:
+        logger.info(f"Sending email - Subject: {subject}, Message: {message}, Recipients: {recipient_list}")
         send_mail(
             subject,
             message,
@@ -22,6 +25,7 @@ def send_custom_email(subject, message, recipient_list, from_email=settings.EMAI
             # html_message=message,
             fail_silently=False,
         )
-        print("Email sent successfully.")
+        logger.info("Email sent successfully.")
     except Exception as e:
+        logger.error(f"Failed to send email: {e}")
         raise Exception(f"Failed to send email: {e}")
