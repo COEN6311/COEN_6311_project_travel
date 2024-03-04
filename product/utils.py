@@ -13,6 +13,7 @@ def get_item_detail(item_type, item_instance):
                 f'Arrival: {item_instance.arrival_time}',
             ],
             'type': 'flight',
+            'price': float(item_instance.price)
         }
     elif item_type == 2 or item_type == '2':
         return {
@@ -25,6 +26,7 @@ def get_item_detail(item_type, item_instance):
                 f'Check-out: {item_instance.check_out_time.strftime("%H:%M") if item_instance.check_out_time else "N/A"}',
             ],
             'type': 'hotel',
+            'price': float(item_instance.price)
         }
     elif item_type == 3 or item_type == '3':
         return {
@@ -36,6 +38,7 @@ def get_item_detail(item_type, item_instance):
                 f'Time: {item_instance.time.strftime("%H:%M") if item_instance.time else None}',
             ],
             'type': 'activity',
+            'price': float(item_instance.price)
         }
     else:
         raise ValueError(f"Unknown item type: {item_type}")
