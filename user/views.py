@@ -69,6 +69,7 @@ def register_handle(request):
     last_name = request.data.get('last_name')
     mobile = request.data.get('mobile')
     skip_verify = request.data.get('skip_verify', '0')
+    is_agent = request.data.get('is_agent', '0')
     # Initialize result parameters
     result = False
     errorMsg = ""
@@ -99,6 +100,7 @@ def register_handle(request):
                         user_data['last_name'] = last_name
                     if mobile:
                         user_data['mobile'] = mobile
+                    user_data['is_agent'] = is_agent
                     User.objects.create_user(**user_data)
                     user = authenticate(request, username=email, password=password)
                     if user is not None:
