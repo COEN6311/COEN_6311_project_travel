@@ -20,7 +20,6 @@ jobs:
           cd /usr/COEN_6311_project_travel
           git reset --hard
           git pull
-          ps aux | grep 'start_order_consumer' | awk '{print $2}' | xargs kill -9
           killall -s INT uwsgi
           killall -s INT celery
           source venv/bin/activate
