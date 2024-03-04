@@ -173,7 +173,7 @@ def deactivate_account(request):
 @api_view(['POST'])
 def update_profile(request):
     '''Update user profile information, include first/last name, mobile, email and password'''
-    update_fields = ['password', 'email', 'first_name', 'last_name', 'mobile']
+    update_fields = ['password', 'email', 'first_name', 'last_name', 'mobile', 'is_agent']
     success_messages = []
     update_detected = False  # Track if any update is detected
     skip_verify = request.data.get('skip_verify', '0')
