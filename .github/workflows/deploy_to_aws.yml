@@ -20,6 +20,7 @@ jobs:
           cd /usr/COEN_6311_project_travel
           git reset --hard
           git pull
+          pkill -f 'python manage.py start_order_consumer'
           killall -s INT uwsgi
           killall -s INT celery
           source venv/bin/activate
