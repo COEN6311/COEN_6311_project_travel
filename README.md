@@ -1,4 +1,4 @@
-```
+
 # Django Project Setup and Management Guide
 
 This guide provides instructions for setting up your Django development environment, managing dependencies, configuring the database, running the development server, and handling migrations.
@@ -13,7 +13,6 @@ Create a virtual environment to isolate project dependencies:
   ```bash
   /usr/local/bin/python3.12 -m venv venv
   source venv/bin/activate
-  ```
   
 - For Windows:
   ```cmd
