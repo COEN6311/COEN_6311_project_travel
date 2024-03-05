@@ -45,11 +45,14 @@ INSTALLED_APPS = [
     'django_crontab',
     'uploadapp',
     'cart',
+    'corsheaders',
     'rest_framework.authtoken',
     'rest_framework',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -57,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'COEN_6311_project_travel.urls'
@@ -207,3 +211,7 @@ LOGGING = {
 CELERY_BROKER_URL = "redis://13.59.139.10:6379/0"
 
 CELERY_TIMEZONE = 'America/New_York'
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
