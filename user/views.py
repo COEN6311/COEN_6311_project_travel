@@ -69,6 +69,7 @@ def register_handle(request):
     last_name = request.data.get('last_name')
     mobile = request.data.get('mobile')
     skip_verify = request.data.get('skip_verify', '0')
+    is_agent = request.data.get('is_agent', '0')
     # Initialize result parameters
     result = False
     errorMsg = ""
@@ -99,6 +100,7 @@ def register_handle(request):
                         user_data['last_name'] = last_name
                     if mobile:
                         user_data['mobile'] = mobile
+                    user_data['is_agent'] = is_agent
                     User.objects.create_user(**user_data)
                     user = authenticate(request, username=email, password=password)
                     if user is not None:
@@ -171,7 +173,7 @@ def deactivate_account(request):
 @api_view(['POST'])
 def update_profile(request):
     '''Update user profile information, include first/last name, mobile, email and password'''
-    update_fields = ['password', 'email', 'first_name', 'last_name', 'mobile']
+    update_fields = ['password', 'email', 'first_name', 'last_name', 'mobile', 'is_agent']
     success_messages = []
     update_detected = False  # Track if any update is detected
     skip_verify = request.data.get('skip_verify', '0')
@@ -209,6 +211,8 @@ def update_profile(request):
         logger.exception(e)
         return Response({'result': False, 'errorMsg': 'Email validation timed out'}, status=400)
     if update_detected:
-        return Response({'result': True, 'message': success_messages})
+        return Response({'result': True, 'message': success_messages, 'data': {
+            'userInfo': UserSerializer(user).data
+        }})
     else:
         return Response({'result': True, 'message': 'No update detected'})
