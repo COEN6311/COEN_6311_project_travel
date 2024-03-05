@@ -211,6 +211,8 @@ def update_profile(request):
         logger.exception(e)
         return Response({'result': False, 'errorMsg': 'Email validation timed out'}, status=400)
     if update_detected:
-        return Response({'result': True, 'message': success_messages})
+        return Response({'result': True, 'message': success_messages, 'data': {
+            'userInfo': UserSerializer(user).data
+        }})
     else:
         return Response({'result': True, 'message': 'No update detected'})
