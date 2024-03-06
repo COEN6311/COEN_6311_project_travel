@@ -7,6 +7,7 @@ urlpatterns = [
     path('logout', views.user_logout, name='user_logout'),  # user logout
     path('deactive', views.deactivate_account, name='user_deactivate_account'),
     path('profile_update', views.update_profile, name='user_profile_update'),
-    path('confirm', views.confirm_email_click, name='confirm_email_click')
+    path('confirm', views.confirm_email_click, name='confirm_email_click'),
+    path('view_profile', views.user_profile, name='user_profile')
 
 ]

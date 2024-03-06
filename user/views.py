@@ -160,8 +160,8 @@ def deactivate_account(request):
         try:
             send_verification_email_and_validate(email, skip_verify)
             user = User.objects.get(email=email)
-            user.is_active = False
-            user.save()
+            logger.info(f'User  deactivate account for email: {email}')
+            user.delete()
             return Response(
                 {'result': True, 'message': 'User account deactivated successfully'})
         except User.DoesNotExist:
@@ -216,3 +216,16 @@ def update_profile(request):
         }})
     else:
         return Response({'result': True, 'message': 'No update detected'})
+
+
+@api_view(['GET'])
+def user_profile(request):
+    try:
+        user = request.user
+        if user:
+            return Response({'result': True, 'message': 'Query user information successfully.', 'data': {
+                'userInfo': UserSerializer(user).data}})
+        return Response({'result': False, 'errorMsg': 'User not found'}, status=404)
+    except Exception as e:
+        logger.exception(e)
+        return Response({'result': False, 'errorMsg': 'user_profile error'}, status=404)
