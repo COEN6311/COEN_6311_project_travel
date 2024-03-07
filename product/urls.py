@@ -14,5 +14,6 @@ urlpatterns = [
     path('package/delete', views.delete_package, name='delete_package'),
     path('package/update', views.update_package, name='update_package'),
     path('allProduct', views.packages_with_items, name='packages_with_items'),
+    path('allProduct/agent', views.view_agent_products, name='view_agent_products'),
 
 ]

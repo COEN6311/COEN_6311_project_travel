@@ -290,6 +290,24 @@ def view_user_packages(request):
         {"result": True, "message": "User packages list", "data": serializer.data, "errorMsg": ""})
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def packages_with_items(request):
+    response_data = get_packages_with_items(None)
+    return JsonResponse(
+        {"result": True, "message": "select all packages and items successfully", "data": response_data,
+         "errorMsg": ""},
+        status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def view_agent_products(request):
+    response_data = get_packages_with_items(request.user)
+    return JsonResponse(
+        {"result": True, "message": "select the agent packages and items successfully", "data": response_data},
+        status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 def delete_package(request):
     obj_id = request.data.get('id')
@@ -305,13 +323,6 @@ def delete_package(request):
     except CustomPackage.DoesNotExist:
         return Response({'result': False, 'errorMsg': 'Package not found', 'message': "", 'data': None},
                         status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def packages_with_items(request):
-    response_data = get_packages_with_items()
-    return Response(response_data)
 
 
 def insert_package(data, owner, items_data):
