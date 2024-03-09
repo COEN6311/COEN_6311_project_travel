@@ -316,17 +316,24 @@ def packages_with_items(request):
 
 def insert_package(data, owner, items_data):
     with transaction.atomic():
+        input_price = data.get('price', 0)  # Get input price
+
+        if input_price != 0:  # If input price is not 0, use it directly
+            total_price = input_price
+        else:
+            total_price = sum(item_data.get('number') * get_model_by_item_type(item_data.get('type')).objects.get(
+                id=item_data.get('id')).price for item_data in items_data)
+
         custom_package = CustomPackage.objects.create(
             name=data.get('name', ' '),
             description=data.get('description', ' '),
             owner=owner,
-            price=data.get('price', 0),
+            price=total_price,
             image_src=data.get('image_src'),
             is_user=not owner.is_agent,
             features=data.get('features', [])
         )
 
-        total_price = data.get('price', 0)
         for item_data in items_data:
             item_type = item_data.get('type')
             item_id = item_data.get('id')
@@ -334,8 +341,6 @@ def insert_package(data, owner, items_data):
 
             model = get_model_by_item_type(item_type)
             model_instance = model.objects.get(id=item_id)
-            item_price = model_instance.price * quantity
-            total_price += item_price
 
             PackageItem.objects.create(
                 package=custom_package,
@@ -346,7 +351,5 @@ def insert_package(data, owner, items_data):
                 detail=get_item_detail(item_type, model_instance)
             )
 
-        custom_package.price = total_price
-        custom_package.save()
         refresh_redis_packages_with_items()
         return custom_package

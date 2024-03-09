@@ -39,6 +39,7 @@ class FlightTicketSerializer(ItemSerializer):
     departure_time = serializers.TimeField(write_only=True)
     seat_class = serializers.CharField(write_only=True)
     destination = serializers.CharField(write_only=True)
+    price = serializers.FloatField()  # or serializers.FloatField()
 
     class Meta:
         model = FlightTicket
@@ -71,6 +72,7 @@ class HotelSerializer(ItemSerializer):
     room = serializers.CharField(write_only=True)
     check_in_time = serializers.TimeField(write_only=True)
     check_out_time = serializers.TimeField(write_only=True)
+    price = serializers.FloatField()  # or serializers.FloatField()
 
     class Meta:
         model = Hotel
@@ -101,6 +103,7 @@ class ActivitySerializer(ItemSerializer):
     location = serializers.CharField(write_only=True)
     address = serializers.CharField(write_only=True)
     time = serializers.TimeField(write_only=True)
+    price = serializers.FloatField()  # or serializers.FloatField()
 
     class Meta:
         model = Activity
@@ -140,6 +143,7 @@ class CustomPackageSerializer(serializers.ModelSerializer):
     imageAlt = serializers.CharField(source='name', read_only=True)
     type = serializers.CharField(default='package', read_only=True)
     features = serializers.JSONField(write_only=True)
+    price = serializers.FloatField()  # or serializers.FloatField()
 
     class Meta:
         model = CustomPackage
