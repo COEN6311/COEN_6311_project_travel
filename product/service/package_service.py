@@ -1,14 +1,11 @@
 import json
 import threading
 
-
-
 from ..contans import redis_key_packages_with_items_data, redis_expire_packages_with_items_data
 from ..serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
 from ..models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity
 
 from utils.redis_connect import redis_client
-
 
 
 def service_refresh_redis_packages_with_items():
@@ -21,19 +18,33 @@ def refresh_redis_packages_with_items():
     thread.start()
 
 
-def get_packages_with_items():
-    cached_data = redis_client.get(redis_key_packages_with_items_data)
-    if cached_data:
-        return json.loads(cached_data)
+def get_packages_with_items(user):
+    for_agent = user is not None
+    if not for_agent:
+        cached_data = redis_client.get(redis_key_packages_with_items_data)
+        if cached_data:
+            return json.loads(cached_data)
 
     # Retrieve all packages  is_user=False prevent select user own package
-    packages = CustomPackage.objects.filter(is_user=False).prefetch_related('packageitem_set').all()
+    if for_agent:
+        packages = CustomPackage.objects.filter(is_user=False, owner=user).prefetch_related('packageitem_set').all()
+    else:
+        packages = CustomPackage.objects.filter(is_user=False).prefetch_related('packageitem_set').all()
     package_serializer = CustomPackageSerializer(packages, many=True)
 
     # Retrieve all items
-    flight_tickets = FlightTicket.objects.all()
-    hotels = Hotel.objects.all()
-    activities = Activity.objects.all()
+    if for_agent:
+        flight_tickets = FlightTicket.objects.filter(owner=user).all()
+    else:
+        flight_tickets = FlightTicket.objects.all()
+    if for_agent:
+        hotels = Hotel.objects.filter(owner=user).all()
+    else:
+        hotels = Hotel.objects.all()
+    if for_agent:
+        activities = Activity.objects.filter(owner=user).all()
+    else:
+        activities = Activity.objects.all()
 
     # Serialize all items
     flight_ticket_serializer = FlightTicketSerializer(flight_tickets, many=True)
@@ -56,6 +67,7 @@ def get_packages_with_items():
     for item_data in activity_serializer.data:
         response_data.append(item_data)
 
-    redis_client.set(redis_key_packages_with_items_data, json.dumps(response_data),
-                     redis_expire_packages_with_items_data)
+    if not for_agent:
+        redis_client.set(redis_key_packages_with_items_data, json.dumps(response_data),
+                         redis_expire_packages_with_items_data)
     return response_data
