@@ -27,7 +27,10 @@ class ItemSerializer(serializers.ModelSerializer):
         return obj.image_src
 
     def get_imageAlt(self, obj):
-        return obj.name
+        if hasattr(obj, 'image_alt'):
+            return obj.image_alt
+        else:
+            return obj.name
 
 
 class FlightTicketSerializer(ItemSerializer):
@@ -40,11 +43,12 @@ class FlightTicketSerializer(ItemSerializer):
     seat_class = serializers.CharField(write_only=True)
     destination = serializers.CharField(write_only=True)
     price = serializers.FloatField()  # or serializers.FloatField()
+    image_alt = serializers.CharField(write_only=True)
 
     class Meta:
         model = FlightTicket
         fields = ['id', 'name', 'price', 'description', 'options', 'imageSrc', 'imageAlt', 'type', 'details',
-                  'flight_number', 'arrival_time', 'departure_time', 'seat_class', 'destination']
+                  'image_alt', 'flight_number', 'arrival_time', 'departure_time', 'seat_class', 'destination']
 
     def get_details(self, obj):
         return [
@@ -73,11 +77,12 @@ class HotelSerializer(ItemSerializer):
     check_in_time = serializers.TimeField(write_only=True)
     check_out_time = serializers.TimeField(write_only=True)
     price = serializers.FloatField()  # or serializers.FloatField()
+    image_alt = serializers.CharField(write_only=True)
 
     class Meta:
         model = Hotel
         fields = ['id', 'name', 'price', 'description', 'options', 'imageSrc', 'imageAlt', 'type', 'details',
-                  'hotel_name', 'address', 'room', 'check_in_time', 'check_out_time']
+                  'image_alt', 'hotel_name', 'address', 'room', 'check_in_time', 'check_out_time']
 
     def get_details(self, obj):
         return [
@@ -104,10 +109,12 @@ class ActivitySerializer(ItemSerializer):
     address = serializers.CharField(write_only=True)
     time = serializers.TimeField(write_only=True)
     price = serializers.FloatField()  # or serializers.FloatField()
+    image_alt = serializers.CharField(write_only=True)
 
     class Meta:
         model = Activity
         fields = ['id', 'name', 'price', 'description', 'options', 'imageSrc', 'imageAlt', 'type', 'details', 'event',
+                  'image_alt',
                   'location', 'address', 'time']
 
     def get_details(self, obj):
@@ -140,15 +147,16 @@ class CustomPackageSerializer(serializers.ModelSerializer):
     details = serializers.SerializerMethodField(read_only=True)
     options = serializers.SerializerMethodField(read_only=True)
     imageSrc = serializers.URLField(source='image_src', read_only=True)
-    imageAlt = serializers.CharField(source='name', read_only=True)
+    imageAlt = serializers.CharField(source='image_alt', read_only=True)
     type = serializers.CharField(default='package', read_only=True)
     features = serializers.JSONField(write_only=True)
     price = serializers.FloatField()  # or serializers.FloatField()
+    image_alt = serializers.CharField(write_only=True)
 
     class Meta:
         model = CustomPackage
-        fields = ['id', 'name', 'description', 'price', 'details', 'options', 'imageSrc', 'imageAlt', 'type',
-                  'features']
+        fields = ['id', 'name', 'description', 'price', 'details', 'options', 'imageSrc', 'imageAlt', 'image_alt',
+                  'type', 'features']
 
     def get_options(self, obj):
         options = []

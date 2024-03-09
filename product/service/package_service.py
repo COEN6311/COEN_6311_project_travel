@@ -10,7 +10,7 @@ from utils.redis_connect import redis_client
 
 def service_refresh_redis_packages_with_items():
     redis_client.delete(redis_key_packages_with_items_data)
-    get_packages_with_items()
+    get_packages_with_items(None)
 
 
 def refresh_redis_packages_with_items():

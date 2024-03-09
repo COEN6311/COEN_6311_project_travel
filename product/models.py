@@ -16,6 +16,7 @@ class Item(BaseModel):
     start_date = models.DateField(default=default_start_date, blank=True, null=True)
     end_date = models.DateField(default=default_end_date, blank=True, null=True)
     image_src = models.URLField(max_length=1024, blank=True, null=True)
+    image_alt = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -47,7 +48,6 @@ class Activity(Item):
 class CustomPackage(Item):
     features = models.JSONField(default=list)
     is_user = models.BooleanField(default=False)
-
 
     def __str__(self):
         return self.name

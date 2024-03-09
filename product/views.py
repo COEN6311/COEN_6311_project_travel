@@ -84,6 +84,8 @@ class ItemAPIView(APIView):
         model, serializer_class = get_model_and_serializer(type_param)
 
         if action == 'insert':
+            if 'image_alt' not in request.data:
+                request.data['image_alt'] = request.data.get('name')
             serializer = serializer_class(data=request.data)
             if serializer.is_valid():
                 serializer.save(owner=request.user, image_src=request.data.get('image_src'))
@@ -334,13 +336,16 @@ def insert_package(data, owner, items_data):
         else:
             total_price = sum(item_data.get('number') * get_model_by_item_type(item_data.get('type')).objects.get(
                 id=item_data.get('id')).price for item_data in items_data)
-
+        image_alt = data.get('image_alt')
+        if not image_alt:
+            image_alt = data.get('name')
         custom_package = CustomPackage.objects.create(
             name=data.get('name', ' '),
             description=data.get('description', ' '),
             owner=owner,
             price=total_price,
             image_src=data.get('image_src'),
+            image_alt=image_alt,
             is_user=not owner.is_agent,
             features=data.get('features', [])
         )
