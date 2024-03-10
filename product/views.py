@@ -211,7 +211,7 @@ def update_package(request):
             custom_package.name = data.get('name', custom_package.name)
             custom_package.description = data.get('description', custom_package.description)
             custom_package.price = data.get('price', custom_package.price)
-
+            custom_package.image_src = data.get('image_src', custom_package.image_src)
             # Process items_data if provided
             items_data = data.get('items', [])
             given_item_set = {(item['type'], item['id']) for item in items_data}
