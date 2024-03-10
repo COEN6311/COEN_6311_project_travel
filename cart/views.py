@@ -104,8 +104,11 @@ def cartCheckout(request):
                 }
                 package_items.append(item_data)
             # Bulk create package items
-            # todo   the package null name and null description and null feature
-            custom_package = insert_package({}, request.user, package_items)
+            data = {
+                "name": "User-created Package",
+                "description": "User-created Package"
+            }
+            custom_package = insert_package(data, request.user, package_items)
             # Clear cart items
             cart_items.delete()
             # Serialize custom_package

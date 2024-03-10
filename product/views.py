@@ -123,8 +123,11 @@ class ItemAPIView(APIView):
             if obj:
                 serializer = serializer_class(obj, data=request.data, partial=True)
                 if serializer.is_valid():
-                    serializer.save(owner=request.user)
-
+                    image_src = request.data.get('image_src')
+                    if image_src:
+                        serializer.save(owner=request.user, image_src=image_src)
+                    else:
+                        serializer.save(owner=request.user)
                     package_items = PackageItem.objects.filter(
                         Q(item_object_id=obj_id) & Q(type=type_param)
                     )

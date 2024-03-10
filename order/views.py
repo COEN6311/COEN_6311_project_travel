@@ -43,7 +43,7 @@ def payment_order(request):
                 return JsonResponse({'result': False,
                                      'errorMsg': 'Order does not exist or the order has already been paid.'},
                                     status=400)
-            if user_order.price != Decimal(amount):
+            if calculate_price_taxed(user_order.price) != Decimal(amount):
                 return JsonResponse({'result': False, 'message': 'Invalid payment amount.'}, status=400)
             agent_orders = AgentOrder.objects.filter(user_order=user_order)
             # pending payment transfer to pending departure or travelling
@@ -107,7 +107,8 @@ def place_order(request):
                 item_map[user_id].append(item)
                 agent_map[user_id] = item.owner
                 order_detail.append(packageItem.detail)
-            user_order_price = calculate_price_taxed(package.price)
+            # user_order_price = calculate_price_taxed(package.price)
+            user_order_price = package.price
             user_order_number = generate_random_number()
             user_order = UserOrder.objects.create(
                 name=package.name,
@@ -129,7 +130,7 @@ def place_order(request):
                 loop_count += 1
                 package_name = package.name if not package.is_user else 'User-created package'
                 package_price_original = package.price if not package.is_user else sum(item.price for item in items)
-                package_price_taxed = calculate_price_taxed(package_price_original)
+                # package_price_taxed = calculate_price_taxed(package_price_original)
                 description = package.description if not package.is_user else 'User-created package'
                 agent_order = AgentOrder.objects.create(
                     user_order=user_order,
@@ -140,7 +141,7 @@ def place_order(request):
                     description=description,
                     departure_date=departure_date,
                     end_date=end_date,
-                    price=package_price_taxed,
+                    price=package_price_original,
                     user=user,
                     agent=agent_map.get(user_id, None),
                     phone=phone,
@@ -158,7 +159,7 @@ def place_order(request):
         return JsonResponse(
             {'result': True, 'data': {
                 'order_number': user_order_number,
-                'amount': user_order_price
+                'amount': float(calculate_price_taxed(user_order_price))
             }, 'message': 'Order placed successfully'},
             status=201)
 

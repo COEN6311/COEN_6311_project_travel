@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def send_custom_email(subject, message, recipient_list, from_email=settings.EMAIL_HOST_USER):
     """
     Sends a custom email.
