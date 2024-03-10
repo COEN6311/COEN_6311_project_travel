@@ -164,9 +164,9 @@ def getCartContent(user):
 
 def checkoutJsonInformation(custom_package):
     serialized_package = CustomPackageSerializer(custom_package).data
-    subtotal = custom_package.price
-    taxes = (subtotal * decimal.Decimal(tax_rate)).quantize(decimal.Decimal('0.01'))
-    total = (subtotal + taxes).quantize(decimal.Decimal('0.01'))
+    subtotal = float(custom_package.price)
+    taxes = float((subtotal * tax_rate))
+    total = float((subtotal + taxes))
     data = {
         'Subtotal': subtotal,
         'Taxes': taxes,
