@@ -88,7 +88,7 @@ def place_order(request):
             end_date = data.get('end_date')
             email = data.get('email')
             phone = data.get('phone')
-            package_id = data.get('package_id')
+            package_id = data.get('packageId')
             user = request.user
             try:
                 package = CustomPackage.objects.prefetch_related('packageitem_set').get(id=package_id)
