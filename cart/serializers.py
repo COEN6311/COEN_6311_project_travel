@@ -29,7 +29,7 @@ class CartSerializer(serializers.ModelSerializer):
         cart_items = CartItem.objects.filter(cart=obj).select_related('item_content_type').prefetch_related('item')
         for cart_item in cart_items:
             total_price += cart_item.item.price * cart_item.quantity
-        return total_price
+        return float(total_price)
 
     def get_items(self, obj):
         cart_items = CartItem.objects.filter(cart=obj).select_related('item_content_type').prefetch_related('item')
