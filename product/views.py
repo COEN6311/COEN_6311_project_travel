@@ -290,8 +290,8 @@ def view_user_packages(request):
     owner = request.user
     queryset = CustomPackage.objects.prefetch_related('packageitem_set').filter(owner=owner)
     page = pagination_class.paginate_queryset(queryset, request)
-    serializer = CustomPackageSerializer(page, many=True)
-    return pagination_class.get_paginated_response(
+    serializer = CustomPackageSerializer(queryset, many=True)
+    return Response(
         {"result": True, "message": "User packages list", "data": serializer.data, "errorMsg": ""})
 
 
