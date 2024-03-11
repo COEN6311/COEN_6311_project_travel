@@ -121,6 +121,7 @@ def place_order(request):
                 user=user,
                 phone=phone,
                 email=email,
+                package_id=package.id,
                 status=OrderStatus.PENDING_PAYMENT.value  #
             )
 
@@ -146,6 +147,8 @@ def place_order(request):
                     agent=agent_map.get(user_id, None),
                     phone=phone,
                     email=email,
+                    package_id=package.id,
+                    is_agent_package=not package.is_user,
                     status=OrderStatus.PENDING_PAYMENT.value  #
                 )
             data = {

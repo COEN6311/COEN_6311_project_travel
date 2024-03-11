@@ -16,6 +16,7 @@ class Order(BaseModel):
     payment_time = models.DateTimeField(blank=True, null=True)
     end_date = models.DateField()
     created_date = models.DateField(auto_now_add=True, blank=True, null=True)
+    package_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -32,6 +33,7 @@ class AgentOrder(Order):
     user_order = models.ForeignKey(UserOrder, related_name='agent_orders', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agent_user_orders')
     agent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agent_orders')
+    is_agent_package = models.BooleanField(default=False)
 
 
 class Payment(BaseModel):
