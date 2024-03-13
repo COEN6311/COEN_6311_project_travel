@@ -8,7 +8,6 @@ from .models import Cart, CartItem
 
 
 def get_item_serializer(item):
-    # 根据项目的类型返回相应的序列化器
     if isinstance(item, FlightTicket):
         return FlightTicketSerializer
     elif isinstance(item, Hotel):
