@@ -14,7 +14,6 @@ def get_item_serializer(item):
         return HotelSerializer
     elif isinstance(item, Activity):
         return ActivitySerializer
-    # 如果有其他类型的项目，可以在此处添加对应的逻辑
     else:
         raise ValueError(f'Unsupported item type: {type(item)}')
 
