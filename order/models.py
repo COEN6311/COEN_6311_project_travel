@@ -34,6 +34,10 @@ class AgentOrder(Order):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agent_user_orders')
     agent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agent_orders')
     is_agent_package = models.BooleanField(default=False)
+    flight_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    hotel_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    activity_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
 
 
 class Payment(BaseModel):
