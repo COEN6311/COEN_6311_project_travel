@@ -235,3 +235,36 @@ def cancel_order(request):
         logger.exception('An error occurred while cancelling the order')
         return JsonResponse({'result': False, 'errorMsg': str(e), 'message': "", 'data': None},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def agent_report(request):
+    try:
+        owner = request.user
+        is_agent = owner.is_agent
+        if not is_agent:
+            return JsonResponse(
+                {'result': False, 'errorMsg': 'Permission denied. Only agents can access this endpoint.'},
+                status=status.HTTP_403_FORBIDDEN)
+        else:
+            orders = AgentOrder.objects.filter(agent=owner, is_delete=False)
+            total_orders_count = len(orders)
+            # Calculate count of orders with status=9
+            canceled_orders_count = sum(1 for order in orders if order.status == OrderStatus.CANCELLED.value)
+            # Filter out orders with status not equal to 9 and generate a new list
+            filtered_orders = [order for order in orders if order.status != OrderStatus.CANCELLED.value]
+            response_data = {
+                'result': 'success',
+                'message': 'Report retrieved successfully',
+                'errorMsg': None,
+                'data': {
+                    'total_orders': total_orders_count,
+                    'status_9_orders': canceled_orders_count,
+                    's': len(filtered_orders)
+                }
+            }
+            # logger.info(log_message)
+        return JsonResponse(response_data)
+    except Exception as e:
+        logger.exception("An error occurred: %s", e)
+        return JsonResponse({'result': False, 'errorMsg': 'system error'}, status=404)
