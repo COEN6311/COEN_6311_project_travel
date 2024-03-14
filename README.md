@@ -88,3 +88,4 @@ If you've modified models, generate and apply migrations:
 
 This guide should help you manage your Django project effectively. For more detailed instructions, refer to the Django documentation.
 ```
+ps aux | grep 'start_order_consumer' | awk '{print $2}' | xargs kill -9
