@@ -5,7 +5,7 @@ This guide provides instructions for setting up your Django development environm
 
 ## Environment Setup
 
-### Creating a Virtual Environment
+### Creating a Virtual Environment 
 
 Create a virtual environment to isolate project dependencies:
 
