@@ -13,7 +13,7 @@ from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
 from order.mq.mq_sender import send_auto_order_cancel
 from order.serializers import UserOrderSerializer, AgentOrderSerializer
-from order.service.payment_service import handle_payment
+from order.service.payment_service import handle_payment, calculate_prices
 from product.models import CustomPackage
 from user.models import User
 from utils.number_util import generate_random_number, calculate_price_taxed
@@ -131,6 +131,7 @@ def place_order(request):
                 loop_count += 1
                 package_name = package.name if not package.is_user else 'User-created package'
                 package_price_original = package.price if not package.is_user else sum(item.price for item in items)
+                flight_price, activity_price, hotel_price = calculate_prices(items)
                 # package_price_taxed = calculate_price_taxed(package_price_original)
                 description = package.description if not package.is_user else 'User-created package'
                 agent_order = AgentOrder.objects.create(
@@ -148,6 +149,9 @@ def place_order(request):
                     phone=phone,
                     email=email,
                     package_id=package.id,
+                    flight_price=flight_price,
+                    hotel_price=hotel_price,
+                    activity_price=activity_price,
                     is_agent_package=not package.is_user,
                     status=OrderStatus.PENDING_PAYMENT.value  #
                 )
