@@ -30,11 +30,11 @@ def payment_order(request):
         try:
             data = json.loads(request.body)
             order_number = data.get('order_number')
-            card_number = data.get('card_number')
-            security_code = data.get('security_code')
+            # card_number = data.get('card_number')
+            # security_code = data.get('security_code')
             amount = data.get('amount')
             user = request.user
-            if not all([order_number, card_number, security_code, amount]):
+            if not all([order_number, amount]):
                 return JsonResponse({'result': False, 'errorMsg': 'One or more required fields are missing.'},
                                     status=400)
 
@@ -49,7 +49,7 @@ def payment_order(request):
                 return JsonResponse({'result': False, 'message': 'Invalid payment amount.'}, status=400)
             agent_orders = AgentOrder.objects.filter(user_order=user_order)
             # pending payment transfer to pending departure or travelling
-            if not handle_payment(card_number, security_code, amount):
+            if not handle_payment(0, 0, amount):
                 return JsonResponse({'result': False, 'message': 'payment failed.'}, status=400)
             payment_time = timezone.now()
             order_status = OrderStatus.PENDING_DEPARTURE.value
