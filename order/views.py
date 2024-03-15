@@ -3,6 +3,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework import status
@@ -15,6 +16,7 @@ from order.mq.mq_sender import send_auto_order_cancel
 from order.serializers import UserOrderSerializer, AgentOrderSerializer
 from order.service.payment_service import handle_payment, calculate_prices
 from product.models import CustomPackage
+from product.serializers import CustomPackageSerializer
 from user.models import User
 from utils.number_util import generate_random_number, calculate_price_taxed
 import logging
@@ -253,14 +255,35 @@ def agent_report(request):
             canceled_orders_count = sum(1 for order in orders if order.status == OrderStatus.CANCELLED.value)
             # Filter out orders with status not equal to 9 and generate a new list
             filtered_orders = [order for order in orders if order.status != OrderStatus.CANCELLED.value]
+            total_flight_revenue = sum(order.flight_price for order in filtered_orders)
+            total_hotel_revenue = sum(order.hotel_price for order in filtered_orders)
+            total_activity_revenue = sum(order.activity_price for order in filtered_orders)
+            total_revenue = sum(order.price for order in filtered_orders)
+            success_order_count = total_orders_count - canceled_orders_count
+            success_rate = round((success_order_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
+
+            top_packages = AgentOrder.objects.filter(agent=owner, is_delete=False, is_agent_package=0) \
+                               .exclude(status=9).values('package_id').annotate(
+                package_count=Count('package_id')).order_by('-package_count')[:3]
+            top_packages_ids = [package['package_id'] for package in top_packages]
+            top_packages_details = CustomPackage.objects.filter(id__in=top_packages_ids)
             response_data = {
                 'result': 'success',
                 'message': 'Report retrieved successfully',
                 'errorMsg': None,
                 'data': {
-                    'total_orders': total_orders_count,
-                    'status_9_orders': canceled_orders_count,
-                    's': len(filtered_orders)
+                    'report_detail': {
+                        'total_order_count': total_orders_count,
+                        'canceled_order_count': canceled_orders_count,
+                        'success_order_count': success_order_count,
+                        'success_rate': success_rate,
+                        'total_revenue': float(total_revenue),
+                        'total_flight_revenue': float(total_flight_revenue),
+                        'total_hotel_revenue': float(total_hotel_revenue),
+                        'total_activity_revenue': float(total_activity_revenue)
+                    },
+                    'top_package': CustomPackageSerializer(top_packages_details, many=True).data
+
                 }
             }
             # logger.info(log_message)
