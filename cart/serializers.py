@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from product.models import FlightTicket, Hotel, Activity
 from product.serializers import FlightTicketSerializer, HotelSerializer, ActivitySerializer
+from utils.constant import tax_rate
 from .models import Cart, CartItem
 
 
@@ -23,8 +24,8 @@ def get_item_serializer(item):
 class CartSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField(read_only=True)
     price = serializers.SerializerMethodField(read_only=True)
-
-
+    taxed = serializers.SerializerMethodField(read_only=True)
+    total = serializers.SerializerMethodField(read_only=True)
 
     def get_items(self, obj):
         cart_items = CartItem.objects.filter(cart=obj).select_related('item_content_type').prefetch_related('item')
@@ -42,6 +43,7 @@ class CartSerializer(serializers.ModelSerializer):
             except ObjectDoesNotExist:
                 pass
         return items_data
+
     def get_price(self, obj):
         total_price = 0
         cart_items = CartItem.objects.filter(cart=obj).select_related('item_content_type').prefetch_related('item')
@@ -52,6 +54,13 @@ class CartSerializer(serializers.ModelSerializer):
                 continue
             total_price += cart_item.item.price * cart_item.quantity
         return float(total_price)
+
+    def get_taxed(self, obj):
+        return self.get_price(obj) * tax_rate
+
+    def get_total(self, obj):
+        return self.get_price(obj) + self.get_taxed(obj)
+
     class Meta:
         model = Cart
-        fields = ['price', 'items']
+        fields = ['price', 'taxed', 'total', 'items']
