@@ -157,6 +157,8 @@ def query_by_user(request):
 
 def getCartContent(user):
     cart = Cart.objects.filter(user=user).first()
+    if not cart:
+        return {'price': 0.00, 'items': []}
     cart_serializer = CartSerializer(cart)
     cart_data = cart_serializer.data
     return cart_data
