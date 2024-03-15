@@ -65,6 +65,7 @@ class PackageItem(BaseModel):
     type = models.PositiveSmallIntegerField()
     detail = models.JSONField(blank=True, null=True)
 
+
     class Meta:
         unique_together = ('package', 'item_content_type', 'item_object_id', 'type', 'is_delete')
 

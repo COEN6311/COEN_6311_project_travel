@@ -22,7 +22,7 @@ class SerializerTypeMixin:
 class ItemSerializer(serializers.ModelSerializer):
     imageSrc = serializers.SerializerMethodField()
     imageAlt = serializers.SerializerMethodField()
-
+    createAt = serializers.SerializerMethodField(read_only=True)
     def get_imageSrc(self, obj):
         return obj.image_src
 
@@ -31,6 +31,8 @@ class ItemSerializer(serializers.ModelSerializer):
             return obj.image_alt
         else:
             return obj.name
+    def get_createAt(self, obj):
+        return obj.create_time.date().strftime("%Y-%m-%d")
 
 
 class FlightTicketSerializer(ItemSerializer):
@@ -48,7 +50,7 @@ class FlightTicketSerializer(ItemSerializer):
     class Meta:
         model = FlightTicket
         fields = ['id', 'name', 'price', 'description', 'options', 'imageSrc', 'imageAlt', 'type', 'details',
-                  'image_alt', 'flight_number', 'arrival_time', 'departure_time', 'seat_class', 'destination']
+                  'image_alt', 'flight_number', 'arrival_time', 'departure_time', 'seat_class', 'destination','start_date','end_date','createAt']
 
     def get_details(self, obj):
         return [
@@ -82,7 +84,7 @@ class HotelSerializer(ItemSerializer):
     class Meta:
         model = Hotel
         fields = ['id', 'name', 'price', 'description', 'options', 'imageSrc', 'imageAlt', 'type', 'details',
-                  'image_alt', 'hotel_name', 'address', 'room', 'check_in_time', 'check_out_time']
+                  'image_alt', 'hotel_name', 'address', 'room', 'check_in_time', 'check_out_time','start_date','end_date','createAt']
 
     def get_details(self, obj):
         return [
@@ -115,7 +117,8 @@ class ActivitySerializer(ItemSerializer):
         model = Activity
         fields = ['id', 'name', 'price', 'description', 'options', 'imageSrc', 'imageAlt', 'type', 'details', 'event',
                   'image_alt',
-                  'location', 'address', 'time']
+                  'location', 'address', 'time',
+                  'start_date','end_date','createAt']
 
     def get_details(self, obj):
         return [
@@ -152,11 +155,12 @@ class CustomPackageSerializer(serializers.ModelSerializer):
     features = serializers.JSONField(write_only=True)
     price = serializers.FloatField()  # or serializers.FloatField()
     image_alt = serializers.CharField(write_only=True)
+    createAt = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = CustomPackage
         fields = ['id', 'name', 'description', 'price', 'details', 'options', 'imageSrc', 'imageAlt', 'image_alt',
-                  'type', 'features']
+                  'type', 'features','createAt']
 
     def get_options(self, obj):
         options = []
@@ -193,3 +197,5 @@ class CustomPackageSerializer(serializers.ModelSerializer):
                 detail_data['id'] = item.item_object_id
                 details.append(detail_data)
         return details
+    def get_createAt(self, obj):
+        return obj.create_time.date().strftime("%Y-%m-%d")
