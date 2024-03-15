@@ -33,6 +33,7 @@ class UserOrderSerializer(serializers.ModelSerializer):
     def get_amount(self, obj):
         return float(calculate_price_taxed(obj.price))
 
+
 class AgentOrderSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     status = serializers.SerializerMethodField(read_only=True)

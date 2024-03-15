@@ -3,6 +3,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework import status
@@ -13,8 +14,9 @@ from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
 from order.mq.mq_sender import send_auto_order_cancel
 from order.serializers import UserOrderSerializer, AgentOrderSerializer
-from order.service.payment_service import handle_payment
+from order.service.payment_service import handle_payment, calculate_prices
 from product.models import CustomPackage
+from product.serializers import CustomPackageSerializer
 from user.models import User
 from utils.number_util import generate_random_number, calculate_price_taxed
 import logging
@@ -131,6 +133,7 @@ def place_order(request):
                 loop_count += 1
                 package_name = package.name if not package.is_user else 'User-created package'
                 package_price_original = package.price if not package.is_user else sum(item.price for item in items)
+                flight_price, activity_price, hotel_price = calculate_prices(items)
                 # package_price_taxed = calculate_price_taxed(package_price_original)
                 description = package.description if not package.is_user else 'User-created package'
                 agent_order = AgentOrder.objects.create(
@@ -148,6 +151,9 @@ def place_order(request):
                     phone=phone,
                     email=email,
                     package_id=package.id,
+                    flight_price=flight_price,
+                    hotel_price=hotel_price,
+                    activity_price=activity_price,
                     is_agent_package=not package.is_user,
                     status=OrderStatus.PENDING_PAYMENT.value  #
                 )
@@ -231,3 +237,57 @@ def cancel_order(request):
         logger.exception('An error occurred while cancelling the order')
         return JsonResponse({'result': False, 'errorMsg': str(e), 'message': "", 'data': None},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def agent_report(request):
+    try:
+        owner = request.user
+        is_agent = owner.is_agent
+        if not is_agent:
+            return JsonResponse(
+                {'result': False, 'errorMsg': 'Permission denied. Only agents can access this endpoint.'},
+                status=status.HTTP_403_FORBIDDEN)
+        else:
+            orders = AgentOrder.objects.filter(agent=owner, is_delete=False)
+            total_orders_count = len(orders)
+            # Calculate count of orders with status=9
+            canceled_orders_count = sum(1 for order in orders if order.status == OrderStatus.CANCELLED.value)
+            # Filter out orders with status not equal to 9 and generate a new list
+            filtered_orders = [order for order in orders if order.status != OrderStatus.CANCELLED.value]
+            total_flight_revenue = sum(order.flight_price for order in filtered_orders)
+            total_hotel_revenue = sum(order.hotel_price for order in filtered_orders)
+            total_activity_revenue = sum(order.activity_price for order in filtered_orders)
+            total_revenue = sum(order.price for order in filtered_orders)
+            success_order_count = total_orders_count - canceled_orders_count
+            success_rate = round((success_order_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
+
+            top_packages = AgentOrder.objects.filter(agent=owner, is_delete=False, is_agent_package=0) \
+                               .exclude(status=9).values('package_id').annotate(
+                package_count=Count('package_id')).order_by('-package_count')[:3]
+            top_packages_ids = [package['package_id'] for package in top_packages]
+            top_packages_details = CustomPackage.objects.filter(id__in=top_packages_ids)
+            response_data = {
+                'result': 'success',
+                'message': 'Report retrieved successfully',
+                'errorMsg': None,
+                'data': {
+                    'report_detail': {
+                        'total_order_count': total_orders_count,
+                        'canceled_order_count': canceled_orders_count,
+                        'success_order_count': success_order_count,
+                        'success_rate': success_rate,
+                        'total_revenue': float(total_revenue),
+                        'total_flight_revenue': float(total_flight_revenue),
+                        'total_hotel_revenue': float(total_hotel_revenue),
+                        'total_activity_revenue': float(total_activity_revenue)
+                    },
+                    'top_package': CustomPackageSerializer(top_packages_details, many=True).data
+
+                }
+            }
+            # logger.info(log_message)
+        return JsonResponse(response_data)
+    except Exception as e:
+        logger.exception("An error occurred: %s", e)
+        return JsonResponse({'result': False, 'errorMsg': 'system error'}, status=404)
