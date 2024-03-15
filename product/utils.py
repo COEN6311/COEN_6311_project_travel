@@ -30,7 +30,7 @@ def get_item_detail(item_type, item_instance):
         }
     elif item_type == 3 or item_type == '3':
         return {
-            'name': item_instance.name,
+            'name': 'Activity Details',
             'items': [
                 f'Event: {item_instance.event}',
                 f'Location: {item_instance.location}',
