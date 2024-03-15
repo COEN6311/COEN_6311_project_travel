@@ -1,12 +1,11 @@
 import decimal
 
-
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, transaction
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from cart.models import CartItem, Cart
-from cart.serializers import CartSerializer
+from cart.serializers import CartSerializer, get_item_serializer
 from product.models import PackageItem, CustomPackage
 from product.serializers import CustomPackageSerializer
 from product.views import get_model_by_item_type, insert_package
@@ -14,7 +13,9 @@ from user.models import User
 from utils.constant import tax_rate
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 @api_view(["POST"])
 def add_item(request):
@@ -112,7 +113,7 @@ def cartCheckout(request):
             # Clear cart items
             cart_items.delete()
             # Serialize custom_package
-            data = checkoutJsonInformation(custom_package)
+            data = cartCheckoutJsonInformation(custom_package)
         return JsonResponse({'result': 'true', 'data': data})
     except User.DoesNotExist:
         return JsonResponse({'result': 'false', 'errorMsg': 'User does not exist'}, status=404)
@@ -133,7 +134,7 @@ def packageCheckout(request):
         if not custom_package:
             return JsonResponse({'result': 'false', 'errorMsg': 'Custom package does not exist'}, status=404)
         # Serialize custom_package
-        data = checkoutJsonInformation(custom_package)
+        data = packageCheckoutJsonInformation(custom_package)
         return JsonResponse({'result': 'true', 'data': data})
     except Exception as e:
         return JsonResponse({'result': 'false', 'errorMsg': 'System error'}, status=404)
@@ -164,15 +165,42 @@ def getCartContent(user):
     return cart_data
 
 
-def checkoutJsonInformation(custom_package):
+def packageCheckoutJsonInformation(custom_package):
+    subtotal = float(custom_package.price)
+    taxes = float((subtotal * tax_rate))
+    total = float((subtotal + taxes))
+    items_data = []
+    package_items = PackageItem.objects.filter(package=custom_package).select_related(
+        'item_content_type').prefetch_related('item')
+    for package_item in package_items:
+        item_instance = package_item.item
+        if item_instance.is_delete:
+            package_item.delete()
+            continue
+        item_serializer = get_item_serializer(item_instance)
+        item_data = item_serializer(item_instance).data
+        items_data.append(item_data)
+
+    data = {
+        'cart': {
+            'price': subtotal,
+            'taxed': taxes,
+            'total': total,
+            'items': items_data
+        }
+    }
+    return data
+
+
+def cartCheckoutJsonInformation(custom_package):
     serialized_package = CustomPackageSerializer(custom_package).data
     subtotal = float(custom_package.price)
     taxes = float((subtotal * tax_rate))
     total = float((subtotal + taxes))
     data = {
-        'Subtotal': subtotal,
-        'Taxes': taxes,
-        'Total': total,
+        'price': subtotal,
+        'taxed': taxes,
+        'total': total,
         'package_items': serialized_package
     }
     return data
