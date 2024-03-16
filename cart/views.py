@@ -166,9 +166,9 @@ def getCartContent(user):
 
 
 def packageCheckoutJsonInformation(custom_package):
-    subtotal = float(custom_package.price)
-    taxes = float((subtotal * tax_rate))
-    total = float((subtotal + taxes))
+    subtotal = round(float(custom_package.price), 2)
+    taxes = round(float((subtotal * tax_rate)), 2)
+    total = round(float((subtotal + taxes)), 2)
     items_data = []
     package_items = PackageItem.objects.filter(package=custom_package).select_related(
         'item_content_type').prefetch_related('item')
@@ -194,9 +194,9 @@ def packageCheckoutJsonInformation(custom_package):
 
 def cartCheckoutJsonInformation(custom_package):
     serialized_package = CustomPackageSerializer(custom_package).data
-    subtotal = float(custom_package.price)
-    taxes = float((subtotal * tax_rate))
-    total = float((subtotal + taxes))
+    subtotal = round(float(custom_package.price), 2)
+    taxes = round(float((subtotal * tax_rate)), 2)
+    total = round(float((subtotal + taxes)), 2)
     data = {
         'price': subtotal,
         'taxed': taxes,

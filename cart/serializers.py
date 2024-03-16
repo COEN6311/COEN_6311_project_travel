@@ -56,10 +56,10 @@ class CartSerializer(serializers.ModelSerializer):
         return float(total_price)
 
     def get_taxed(self, obj):
-        return self.get_price(obj) * tax_rate
+        return round(self.get_price(obj) * tax_rate, 2)
 
     def get_total(self, obj):
-        return self.get_price(obj) + self.get_taxed(obj)
+        return round(self.get_price(obj) + self.get_taxed(obj), 2)
 
     class Meta:
         model = Cart
