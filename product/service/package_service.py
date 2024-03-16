@@ -71,3 +71,22 @@ def get_packages_with_items(user):
         redis_client.set(redis_key_packages_with_items_data, json.dumps(response_data),
                          redis_expire_packages_with_items_data)
     return response_data
+
+
+def update_related_packages_price_by_item(item):
+    custom_packages = CustomPackage.objects.filter(packageitem__item_object_id=item.id).distinct()
+    for custom_package in custom_packages:
+        # Get all package items related to the current custom package
+        package_items_query = PackageItem.objects.filter(package=custom_package)
+        # Initialize total price for the current custom package
+        total_price = 0
+        # Iterate through each package item for the current custom package
+        for package_item in package_items_query:
+            # Get the associated item for the current package item
+            item = package_item.item
+            # If the associated item exists and has a price, add it to the total price
+            if item and item.price:
+                total_price += item.price
+        # Update the total price of the current custom package
+        custom_package.price = total_price
+        custom_package.save()
