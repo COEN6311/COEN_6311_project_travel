@@ -1,3 +1,4 @@
+import decimal
 import json
 from collections import defaultdict
 from decimal import Decimal
@@ -45,7 +46,7 @@ def payment_order(request):
                 return JsonResponse({'result': False,
                                      'errorMsg': 'Order does not exist or the order has already been paid.'},
                                     status=400)
-            if calculate_price_taxed(user_order.price) != Decimal(amount):
+            if calculate_price_taxed(user_order.price) != Decimal(amount).quantize(Decimal('0.01')):
                 return JsonResponse({'result': False, 'message': 'Invalid payment amount.'}, status=400)
             agent_orders = AgentOrder.objects.filter(user_order=user_order)
             # pending payment transfer to pending departure or travelling

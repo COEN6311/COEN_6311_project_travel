@@ -22,6 +22,7 @@ def expire_order_callback(ch, method, properties, body):
         user_order = UserOrder.objects.filter(order_number=order_number, status=OrderStatus.PENDING_PAYMENT.value).first()
         if not user_order:
             logger.info("order need not expire handle")
+            return
         agent_orders = AgentOrder.objects.filter(user_order=user_order)
         with transaction.atomic():
             user_order.soft_delete()
