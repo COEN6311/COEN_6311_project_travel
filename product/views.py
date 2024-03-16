@@ -17,7 +17,8 @@ from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
 from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity, soft_delete_package_item
-from .service.package_service import get_packages_with_items, refresh_redis_packages_with_items
+from .service.package_service import get_packages_with_items, refresh_redis_packages_with_items, \
+    update_related_packages_price_by_item
 from .utils import get_item_detail
 
 
@@ -61,6 +62,7 @@ def get_all_models_and_serializers():
 
 
 # Function to get model by item type
+
 
 class ItemAPIView(APIView):
     pagination_class = CustomPagination
@@ -107,6 +109,7 @@ class ItemAPIView(APIView):
                 with transaction.atomic():
                     obj.soft_delete()  # soft delete
                     soft_delete_package_item(obj_id, type_param)
+                    update_related_packages_price_by_item(obj)
                     delete_cart_item(obj_id, type_param)
                 refresh_redis_packages_with_items()
                 return Response({'result': True, 'message': 'Object soft-deleted successfully'}, status=204)
@@ -132,7 +135,7 @@ class ItemAPIView(APIView):
                         Q(item_object_id=obj_id) & Q(type=type_param)
                     )
                     updated_detail = get_item_detail(type_param, obj)
-
+                    update_related_packages_price_by_item(obj)
                     batch_size = 100
                     for i in range(0, len(package_items), batch_size):
                         with transaction.atomic():
@@ -210,7 +213,6 @@ def update_package(request):
 
             custom_package.name = data.get('name', custom_package.name)
             custom_package.description = data.get('description', custom_package.description)
-            custom_package.price = data.get('price', custom_package.price)
             custom_package.image_src = data.get('image_src', custom_package.image_src)
             # Process items_data if provided
             items_data = data.get('items', [])
