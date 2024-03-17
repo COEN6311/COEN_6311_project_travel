@@ -1,7 +1,7 @@
 import json
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser
@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
 from cart.cart_service import delete_cart_item
+from order.models import UserOrder
 from user.customPermission import IsAgentPermission
 from .serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
 from rest_framework.response import Response
@@ -312,6 +313,22 @@ def view_agent_products(request):
     response_data = get_packages_with_items(request.user)
     return JsonResponse(
         {"result": True, "message": "select the agent packages and items successfully", "data": response_data},
+        status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def trend_package(request):
+    trend_packages_by_user_order = UserOrder.objects.filter(is_delete=False, is_agent_package=1) \
+                                       .exclude(status=9).values('package_id').annotate(
+        package_count=Count('package_id')).order_by('-package_count')[:3]
+    trend_packages_ids = [package['package_id'] for package in trend_packages_by_user_order]
+    if len(trend_packages_ids) < 3:
+        trend_packages_details = CustomPackage.objects.filter(is_delete=0)[:3]
+    else:
+        trend_packages_details = CustomPackage.objects.filter(id__in=trend_packages_ids)
+    return JsonResponse(
+        {"result": True, "message": "select trend packages successfully",
+         "data": CustomPackageSerializer(trend_packages_details, many=True).data},
         status=status.HTTP_200_OK)
 
 

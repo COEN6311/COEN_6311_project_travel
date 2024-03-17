@@ -24,6 +24,7 @@ class Order(BaseModel):
 
 class UserOrder(Order):
     order_number = models.CharField(max_length=100)
+    is_agent_package = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_orders')
 
 

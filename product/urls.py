@@ -15,5 +15,6 @@ urlpatterns = [
     path('package/update', views.update_package, name='update_package'),
     path('allProduct', views.packages_with_items, name='packages_with_items'),
     path('allProduct/agent', views.view_agent_products, name='view_agent_products'),
+    path('package/trend', views.trend_package, name='view_trend_package'),
 
 ]
