@@ -11,9 +11,14 @@ from utils.number_util import calculate_price_taxed
 
 
 class UserSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email']
+        fields = ['id', 'name', 'first_name', 'last_name', 'email']
+
+    def get_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
 
 
 class UserOrderSerializer(serializers.ModelSerializer):
@@ -21,10 +26,12 @@ class UserOrderSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField(read_only=True)
     price = serializers.FloatField()  # or serializers.FloatField()
     amount = serializers.SerializerMethodField(read_only=True)
+    createdAt = serializers.DateField(read_only=True, source='created_date')
 
     class Meta:
         model = UserOrder
-        fields = ['id', 'order_number', 'status', 'price', 'amount', 'name', 'description', 'created_date', 'user']
+        fields = ['id', 'order_number', 'status', 'price', 'amount', 'name', 'description', 'createdAt', 'created_date',
+                  'user']
 
     def get_status(self, obj):
         status_code = obj.status
@@ -39,11 +46,12 @@ class AgentOrderSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField(read_only=True)
     price = serializers.FloatField()  # or serializers.FloatField()
     amount = serializers.SerializerMethodField(read_only=True)
+    createdAt = serializers.DateField(read_only=True, source='created_date')
 
     class Meta:
         model = AgentOrder
         fields = ['id', 'order_number', 'agent_order_number', 'status', 'price', 'amount', 'name', 'description',
-                  'created_date', 'user']
+                  'createdAt', 'created_date', 'user']
 
     def get_status(self, obj):
         status_code = obj.status
