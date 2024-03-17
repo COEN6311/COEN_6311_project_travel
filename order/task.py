@@ -54,16 +54,16 @@ def change_order_status_task():
         # Change user order status to travelled
         for user_order in travalling_user_orders:
             with transaction.atomic():
-                user_order.status = OrderStatus.TRAVELLED.value
+                user_order.status = OrderStatus.COMPLETED.value
                 user_order.save()
 
                 # Change corresponding agent orders status to travelled
                 for agent_order in user_order.agent_orders.all():
-                    agent_order.status = OrderStatus.TRAVELLED.value
+                    agent_order.status = OrderStatus.COMPLETED.value
                     agent_order.save()
                 count += 1
             # Log the status change for each order
-            logger.info(f"Order number {user_order.order_number} has changed status from TRAVELING to TRAVELLED")
+            logger.info(f"Order number {user_order.order_number} has changed status from TRAVELING to COMPLETE")
 
         # Log the total count of orders whose status has been changed
         logger.info(f"Total orders changed status from TRAVELING to TRAVELLED: {count}")
