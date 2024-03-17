@@ -263,7 +263,7 @@ def agent_report(request):
             success_order_count = total_orders_count - canceled_orders_count
             success_rate = round((success_order_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
 
-            top_packages = AgentOrder.objects.filter(agent=owner, is_delete=False, is_agent_package=0) \
+            top_packages = AgentOrder.objects.filter(agent=owner, is_delete=False, is_agent_package=1) \
                                .exclude(status=9).values('package_id').annotate(
                 package_count=Count('package_id')).order_by('-package_count')[:3]
             top_packages_ids = [package['package_id'] for package in top_packages]

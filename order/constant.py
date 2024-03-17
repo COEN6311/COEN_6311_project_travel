@@ -5,7 +5,7 @@ class OrderStatus(Enum):
     PENDING_PAYMENT = 1
     PENDING_DEPARTURE = 2
     TRAVELING = 3
-    TRAVELLED = 4
+    COMPLETED = 4
     CANCELLED = 9
 
     @classmethod
@@ -17,6 +17,6 @@ status_mapping = {
     1: "Pending Payment",
     2: "Pending Departure",
     3: "Traveling",
-    4: "Travelled",
+    4: "Complete",
     9: "Cancelled"
 }
