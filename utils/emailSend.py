@@ -1,3 +1,5 @@
+import threading
+
 from django.core.mail import send_mail
 from django.conf import settings
 import logging
@@ -30,3 +32,9 @@ def send_custom_email(subject, message, recipient_list, from_email=settings.EMAI
     except Exception as e:
         logger.error(f"Failed to send email: {e}")
         raise Exception(f"Failed to send email: {e}")
+
+
+def send_asynchronous_email(subject, message, email):
+    email_thread = threading.Thread(target=send_custom_email,
+                                    args=((subject, message, [email])))
+    email_thread.start()

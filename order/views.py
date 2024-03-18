@@ -1,5 +1,6 @@
 import decimal
 import json
+import threading
 from collections import defaultdict
 from decimal import Decimal
 
@@ -13,9 +14,9 @@ from rest_framework.decorators import api_view
 from order import task
 from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
-from order.mq.mq_sender import send_auto_order_cancel
+from order.mq.mq_sender import send_auto_order_notify_payment, send_auto_order_cancel
 from order.serializers import UserOrderSerializer, AgentOrderSerializer
-from order.service.payment_service import handle_payment, calculate_prices
+from order.service.order_service import handle_payment, calculate_prices, send_order_payment_email
 from product.models import CustomPackage
 from product.serializers import CustomPackageSerializer
 from user.models import User
@@ -71,6 +72,7 @@ def payment_order(request):
                     agent_order.payment_time = payment_time
                     agent_order.save()
                 logger.info("order payment successfully:" + order_number)
+            send_order_payment_email(order_number,user.email)
             return JsonResponse({'result': True, 'message': 'Order payment successfully.'})
         except json.JSONDecodeError:
             return JsonResponse({'result': False, 'errorMsg': 'Invalid JSON format.'}, status=400)
@@ -161,11 +163,12 @@ def place_order(request):
                 )
             data = {
                 'order_number': user_order.order_number,
-                'order_time': str(user_order.create_time)
+                'order_time': str(user_order.create_time),
+                'email': user_order.email
             }
             json_string = json.dumps(data)
-            print(json_string)
             send_auto_order_cancel(json_string)
+            send_auto_order_notify_payment(json_string)
             logger.info("generate and order,order_number:" + user_order_number)
         return JsonResponse(
             {'result': True, 'data': {
