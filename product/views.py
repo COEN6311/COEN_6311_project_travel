@@ -317,6 +317,7 @@ def view_agent_products(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def trend_package(request):
     trend_packages_by_user_order = UserOrder.objects.filter(is_delete=False, is_agent_package=1) \
                                        .exclude(status=9).values('package_id').annotate(
