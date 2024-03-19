@@ -8,15 +8,6 @@ from utils.constant import tax_rate
 from .models import Cart, CartItem
 
 
-def get_item_serializer(item):
-    if isinstance(item, FlightTicket):
-        return FlightTicketSerializer
-    elif isinstance(item, Hotel):
-        return HotelSerializer
-    elif isinstance(item, Activity):
-        return ActivitySerializer
-    else:
-        raise ValueError(f'Unsupported item type: {type(item)}')
 
 
 class CartSerializer(serializers.ModelSerializer):

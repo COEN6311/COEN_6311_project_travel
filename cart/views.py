@@ -5,7 +5,8 @@ from django.db import IntegrityError, transaction
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from cart.models import CartItem, Cart
-from cart.serializers import CartSerializer, get_item_serializer
+from product.service.item_service import get_item_serializer
+from cart.serializers import CartSerializer
 from product.models import PackageItem, CustomPackage
 from product.serializers import CustomPackageSerializer
 from product.views import get_model_by_item_type, insert_package

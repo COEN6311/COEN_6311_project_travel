@@ -27,11 +27,12 @@ class UserOrderSerializer(serializers.ModelSerializer):
     price = serializers.FloatField()  # or serializers.FloatField()
     amount = serializers.SerializerMethodField(read_only=True)
     createdAt = serializers.DateField(read_only=True, source='created_date')
+    items = serializers.JSONField(read_only=True)
 
     class Meta:
         model = UserOrder
         fields = ['id', 'order_number', 'status', 'price', 'amount', 'name', 'description', 'createdAt', 'created_date',
-                  'user']
+                  'items', 'user']
 
     def get_status(self, obj):
         status_code = obj.status
@@ -47,11 +48,12 @@ class AgentOrderSerializer(serializers.ModelSerializer):
     price = serializers.FloatField()  # or serializers.FloatField()
     amount = serializers.SerializerMethodField(read_only=True)
     createdAt = serializers.DateField(read_only=True, source='created_date')
+    items = serializers.JSONField(read_only=True)
 
     class Meta:
         model = AgentOrder
         fields = ['id', 'order_number', 'agent_order_number', 'status', 'price', 'amount', 'name', 'description',
-                  'createdAt', 'created_date', 'user']
+                  'items', 'createdAt', 'created_date', 'user']
 
     def get_status(self, obj):
         status_code = obj.status

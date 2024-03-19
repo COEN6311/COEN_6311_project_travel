@@ -11,6 +11,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 
+from product.service.item_service import get_item_serializer, get_json_structure_by_item
 from order import task
 from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
@@ -72,7 +73,7 @@ def payment_order(request):
                     agent_order.payment_time = payment_time
                     agent_order.save()
                 logger.info("order payment successfully:" + order_number)
-            send_order_payment_email(order_number,user.email)
+            send_order_payment_email(order_number, user.email)
             return JsonResponse({'result': True, 'message': 'Order payment successfully.'})
         except json.JSONDecodeError:
             return JsonResponse({'result': False, 'errorMsg': 'Invalid JSON format.'}, status=400)
@@ -106,13 +107,14 @@ def place_order(request):
             # get Item
             package_items = package.packageitem_set.all()
             order_detail = []
+            user_order_items = []
             for packageItem in package_items:
                 item = packageItem.item
                 user_id = item.owner.id
                 item_map[user_id].append(item)
                 agent_map[user_id] = item.owner
                 order_detail.append(packageItem.detail)
-            # user_order_price = calculate_price_taxed(package.price)
+                user_order_items.append(get_json_structure_by_item(item))
             user_order_price = package.price
             user_order_number = generate_random_number()
             user_order = UserOrder.objects.create(
@@ -127,6 +129,7 @@ def place_order(request):
                 phone=phone,
                 email=email,
                 package_id=package.id,
+                items=user_order_items,
                 is_agent_package=not package.is_user,
                 status=OrderStatus.PENDING_PAYMENT.value  #
             )
@@ -140,6 +143,9 @@ def place_order(request):
                 flight_price, activity_price, hotel_price = calculate_prices(items)
                 # package_price_taxed = calculate_price_taxed(package_price_original)
                 description = package.description if not package.is_user else 'User-created package'
+                agent_order_items = []
+                for item in items:
+                    agent_order_items.append(get_json_structure_by_item(item))
                 agent_order = AgentOrder.objects.create(
                     user_order=user_order,
                     name=package_name,
@@ -154,6 +160,7 @@ def place_order(request):
                     agent=agent_map.get(user_id, None),
                     phone=phone,
                     email=email,
+                    items=agent_order_items,
                     package_id=package.id,
                     flight_price=flight_price,
                     hotel_price=hotel_price,

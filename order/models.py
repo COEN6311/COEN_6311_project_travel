@@ -17,6 +17,7 @@ class Order(BaseModel):
     end_date = models.DateField()
     created_date = models.DateField(auto_now_add=True, blank=True, null=True)
     package_id = models.IntegerField(blank=True, null=True)
+    items = models.JSONField(default=list)
 
     class Meta:
         abstract = True
@@ -38,7 +39,6 @@ class AgentOrder(Order):
     flight_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     hotel_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     activity_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
 
 
 class Payment(BaseModel):
