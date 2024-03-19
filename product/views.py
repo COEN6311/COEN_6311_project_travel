@@ -319,8 +319,9 @@ def view_agent_products(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def trend_package(request):
-    trend_packages_by_user_order = UserOrder.objects.filter(is_delete=False, is_agent_package=1) \
-                                       .exclude(status=9).values('package_id').annotate(
+    trend_packages_by_user_order = UserOrder.objects.filter(is_delete=False, is_agent_package=1, name__gt='') \
+                                       .exclude(status=9).exclude(name='User-created Package').values(
+        'package_id').annotate(
         package_count=Count('package_id')).order_by('-package_count')[:3]
     trend_packages_ids = [package['package_id'] for package in trend_packages_by_user_order]
     if len(trend_packages_ids) < 3:
