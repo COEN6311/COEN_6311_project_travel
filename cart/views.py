@@ -11,7 +11,7 @@ from product.models import PackageItem, CustomPackage
 from product.serializers import CustomPackageSerializer
 from product.views import get_model_by_item_type, insert_package
 from user.models import User
-from utils.constant import tax_rate
+from utils.constant import tax_rate, user_create_package_name
 
 import logging
 
@@ -107,8 +107,8 @@ def cartCheckout(request):
                 package_items.append(item_data)
             # Bulk create package items
             data = {
-                "name": "User-created Package",
-                "description": "User-created Package"
+                "name": user_create_package_name,
+                "description": user_create_package_name
             }
             custom_package = insert_package(data, request.user, package_items)
             # Clear cart items

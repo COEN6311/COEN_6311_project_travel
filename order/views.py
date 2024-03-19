@@ -21,6 +21,7 @@ from order.service.order_service import handle_payment, calculate_prices, send_o
 from product.models import CustomPackage
 from product.serializers import CustomPackageSerializer
 from user.models import User
+from utils.constant import user_create_package_name
 from utils.number_util import generate_random_number, calculate_price_taxed
 import logging
 
@@ -138,11 +139,11 @@ def place_order(request):
             # Adjust agent order information based on whether it is a user-built package.
             for user_id, items in item_map.items():
                 loop_count += 1
-                package_name = package.name if not package.is_user else 'User-created package'
+                package_name = package.name if not package.is_user else user_create_package_name
                 package_price_original = package.price if not package.is_user else sum(item.price for item in items)
                 flight_price, activity_price, hotel_price = calculate_prices(items)
                 # package_price_taxed = calculate_price_taxed(package_price_original)
-                description = package.description if not package.is_user else 'User-created package'
+                description = package.description if not package.is_user else user_create_package_name
                 agent_order_items = []
                 for item in items:
                     agent_order_items.append(get_json_structure_by_item(item))

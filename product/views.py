@@ -12,6 +12,7 @@ from rest_framework.pagination import PageNumberPagination
 from cart.cart_service import delete_cart_item
 from order.models import UserOrder
 from user.customPermission import IsAgentPermission
+from utils.constant import user_create_package_name
 from .serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
 from rest_framework.response import Response
 from django.http import JsonResponse
@@ -320,7 +321,7 @@ def view_agent_products(request):
 @permission_classes([AllowAny])
 def trend_package(request):
     trend_packages_by_user_order = UserOrder.objects.filter(is_delete=False, is_agent_package=1, name__gt='') \
-                                       .exclude(status=9).exclude(name='User-created Package').values(
+                                       .exclude(status=9).exclude(name=user_create_package_name).values(
         'package_id').annotate(
         package_count=Count('package_id')).order_by('-package_count')[:3]
     trend_packages_ids = [package['package_id'] for package in trend_packages_by_user_order]
