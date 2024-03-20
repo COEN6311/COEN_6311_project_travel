@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from product.models import FlightTicket, Hotel, Activity
 from product.serializers import FlightTicketSerializer, HotelSerializer, ActivitySerializer
+from product.service.item_service import get_item_serializer
 from utils.constant import tax_rate
 from .models import Cart, CartItem
 
