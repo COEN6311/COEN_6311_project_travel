@@ -1,3 +1,6 @@
+from datetime import datetime
+
+from order.constant import OrderStatus
 from product.models import Activity, Hotel, FlightTicket
 from utils.emailSend import send_asynchronous_email
 
@@ -37,3 +40,18 @@ def send_order_notify_payment_email(order_number, email):
     # send email notification
     email_message = "Your order (order number: " + order_number + ") has not been paid. We will keep the order for 5 minutes."
     send_asynchronous_email(subject, email_message, email)
+
+
+def get_order_status_by_date_span(start_date, end_date):
+    today = datetime.now().date()
+
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    if start_date <= today <= end_date:
+        status = OrderStatus.TRAVELING.value
+    elif today < start_date:
+        status = OrderStatus.PENDING_DEPARTURE.value
+    elif today > end_date:
+        status = OrderStatus.COMPLETED.value
+    return status

@@ -17,7 +17,8 @@ from order.constant import OrderStatus
 from order.models import UserOrder, AgentOrder, Payment
 from order.mq.mq_sender import send_auto_order_notify_payment, send_auto_order_cancel
 from order.serializers import UserOrderSerializer, AgentOrderSerializer
-from order.service.order_service import handle_payment, calculate_prices, send_order_payment_email
+from order.service.order_service import handle_payment, calculate_prices, send_order_payment_email, \
+    get_order_status_by_date_span
 from product.models import CustomPackage
 from product.serializers import CustomPackageSerializer
 from user.models import User
@@ -248,6 +249,47 @@ def cancel_order(request):
                             status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger.exception('An error occurred while cancelling the order')
+        return JsonResponse({'result': False, 'errorMsg': str(e), 'message': "", 'data': None},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+def modify_order(request):
+    order_number = request.data.get('order_number')
+    start_date = request.data.get('start_date')
+    end_date = request.data.get('end_date')
+    if not order_number:
+        return JsonResponse({'result': False, 'errorMsg': 'Please provide order number', 'message': "", 'data': None},
+                            status=status.HTTP_400_BAD_REQUEST)
+    try:
+        user_order = UserOrder.objects.prefetch_related('agent_orders').get(order_number=order_number)
+        if user_order.status == OrderStatus.CANCELLED.value:
+            logger.info(f'Order {order_number} is already cancelled')
+            return JsonResponse({'result': True, 'message': 'OOrder is currently canceled and cannot be modified.'},
+                                status=status.HTTP_200_OK)
+        if user_order.status == OrderStatus.PENDING_PAYMENT.value:
+            order_status = OrderStatus.PENDING_PAYMENT.value
+        else:
+            order_status = get_order_status_by_date_span(start_date, end_date)
+        with transaction.atomic():
+            user_order.status = order_status
+            user_order.departure_date = start_date
+            user_order.end_date = end_date
+            user_order.save()
+
+            for agent_order in user_order.agent_orders.all():
+                agent_order.departure_date = start_date
+                agent_order.end_date = end_date
+                agent_order.status = order_status
+                agent_order.save()
+        logger.info(f'Order {order_number} successfully modified')
+        return JsonResponse({'result': True, 'message': 'Order successfully modified'}, status=status.HTTP_200_OK)
+    except UserOrder.DoesNotExist:
+        logger.error(f'Order {order_number} does not exist')
+        return JsonResponse({'result': False, 'errorMsg': 'Order does not exist', 'message': "", 'data': None},
+                            status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.exception('An error occurred while modified the order')
         return JsonResponse({'result': False, 'errorMsg': str(e), 'message': "", 'data': None},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
