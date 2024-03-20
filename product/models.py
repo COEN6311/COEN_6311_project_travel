@@ -65,7 +65,6 @@ class PackageItem(BaseModel):
     type = models.PositiveSmallIntegerField()
     detail = models.JSONField(blank=True, null=True)
 
-
     class Meta:
         unique_together = ('package', 'item_content_type', 'item_object_id', 'type', 'is_delete')
 
@@ -73,6 +72,7 @@ class PackageItem(BaseModel):
 def soft_delete_package_item(item_id, item_type):
     package_items = PackageItem.objects.filter(
         item_object_id=item_id,
-        type=item_type
+        type=item_type,
+        is_delete=False,
     )
-    package_items.update(is_delete=True)
+    package_items.delete()

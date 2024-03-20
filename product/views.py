@@ -212,7 +212,7 @@ def update_package(request):
 
         with transaction.atomic():
             custom_package = CustomPackage.objects.select_for_update().get(id=package_id)
-
+            custom_package.features = data.get('features', custom_package.features)
             custom_package.name = data.get('name', custom_package.name)
             custom_package.description = data.get('description', custom_package.description)
             custom_package.image_src = data.get('image_src', custom_package.image_src)
@@ -226,8 +226,8 @@ def update_package(request):
                 item_type = item.type
                 item_id = item.item_object_id
                 if (item_type, item_id) not in given_item_set:
-                    item.soft_delete()
-
+                    item.delete()
+            new_price = 0
             # 遍历给定项目列表，更新或创建项目
             for item_data in items_data:
                 item_id = item_data.get('id')
@@ -236,7 +236,7 @@ def update_package(request):
 
                 model = get_model_by_item_type(item_type)
                 model_instance = model.objects.get(id=item_id)
-
+                new_price += model_instance.price
                 # 更新或创建 PackageItem 对象
                 package_item, created = PackageItem.objects.update_or_create(
                     package=custom_package,
@@ -248,7 +248,7 @@ def update_package(request):
                 # 更新项目的详细信息
                 package_item.detail = get_item_detail(item_type, model_instance)
                 package_item.save()
-
+            custom_package.price = new_price
             custom_package.save()
             serializer = CustomPackageSerializer(custom_package)
             refresh_redis_packages_with_items()
