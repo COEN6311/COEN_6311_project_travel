@@ -20,7 +20,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
 from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity, soft_delete_package_item
 from .service.package_service import get_packages_with_items, refresh_redis_packages_with_items, \
-    update_related_packages_price_by_item
+    update_related_packages_price_by_item, get_customer_packages
 from .utils import get_item_detail
 
 
@@ -311,7 +311,11 @@ def packages_with_items(request):
 
 @api_view(['GET'])
 def view_agent_products(request):
-    response_data = get_packages_with_items(request.user)
+    user = request.user
+    if user is not None and not user.is_agent:
+        response_data = get_customer_packages(request.user)
+    else:
+        response_data = get_packages_with_items(request.user)
     return JsonResponse(
         {"result": True, "message": "select the agent packages and items successfully", "data": response_data},
         status=status.HTTP_200_OK)

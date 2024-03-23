@@ -89,3 +89,9 @@ def update_related_packages_price_by_item(item):
         # Update the total price of the current custom package
         custom_package.price = total_price
         custom_package.save()
+
+
+def get_customer_packages(user):
+    packages = CustomPackage.objects.filter(owner=user).prefetch_related('packageitem_set').all()
+    package_serializer = CustomPackageSerializer(packages, many=True)
+    return package_serializer.data

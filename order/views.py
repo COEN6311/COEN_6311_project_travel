@@ -197,7 +197,7 @@ def view_orders(request):
         owner = request.user
         is_user = not owner.is_agent
         if is_user:
-            orders = UserOrder.objects.filter(user=owner)
+            orders = UserOrder.objects.filter(user=owner).order_by('-id')
             serializer = UserOrderSerializer(orders, many=True)
             response_data = {
                 'result': 'success',
@@ -206,7 +206,7 @@ def view_orders(request):
                 'data': serializer.data
             }
         else:
-            orders = AgentOrder.objects.filter(agent=owner)
+            orders = AgentOrder.objects.filter(agent=owner).order_by('-id')
             serializer = AgentOrderSerializer(orders, many=True)
             response_data = {
                 'result': 'success',
