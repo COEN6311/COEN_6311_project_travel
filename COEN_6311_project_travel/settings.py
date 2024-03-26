@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django_crontab',
     'uploadapp',
     'cart',
+    'remark',
     'corsheaders',
     'rest_framework.authtoken',
     'rest_framework',

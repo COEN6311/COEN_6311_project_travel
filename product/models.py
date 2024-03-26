@@ -17,6 +17,8 @@ class Item(BaseModel):
     end_date = models.DateField(default=default_end_date, blank=True, null=True)
     image_src = models.URLField(max_length=1024, blank=True, null=True)
     image_alt = models.CharField(max_length=255, blank=True, null=True)
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=0.0)
+    rating_count = models.IntegerField(default=0, blank=True, null=True)
 
     class Meta:
         abstract = True
