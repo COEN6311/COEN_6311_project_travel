@@ -23,6 +23,12 @@ class ItemSerializer(serializers.ModelSerializer):
     imageSrc = serializers.SerializerMethodField()
     imageAlt = serializers.SerializerMethodField()
     createAt = serializers.SerializerMethodField(read_only=True)
+    rating = serializers.SerializerMethodField()
+
+    def get_rating(self, obj):
+        rating_decimal = obj.rating  # 假设 rating 是 Decimal 字段
+        rating_float = float(rating_decimal)
+        return rating_float
 
     def get_imageSrc(self, obj):
         return obj.image_src
