@@ -4,6 +4,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 
 from product.service.item_service import get_item_by_category_and_id
+from product.service.package_service import service_refresh_redis_packages_with_items
 from remark.models import Remark
 
 
@@ -44,7 +45,7 @@ def add_remark(request):
 
         item.save()
 
-
+    service_refresh_redis_packages_with_items()
     return JsonResponse(
         {'result': True, 'message': 'Remark created successfully'},
         status=201)
