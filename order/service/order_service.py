@@ -2,7 +2,7 @@ from datetime import datetime
 
 from order.constant import OrderStatus
 from product.models import Activity, Hotel, FlightTicket
-from utils.emailSend import send_asynchronous_email
+from utils.emailSend import send_asynchronous_email, send_custom_email
 
 
 def handle_payment(card_number, security_code, amount):
@@ -32,7 +32,7 @@ def send_order_payment_email(order_number, email):
     subject = "CONCORDIA TRAVEL:Your order has been paid successfully"
     # send email notification
     email_message = "Your order (order number: " + order_number + ") has been paid successfully. Thank you for choosing ConcordiaTravel."
-    send_asynchronous_email(subject, email_message, email)
+    send_custom_email(subject, email_message, [email])
 
 
 def send_order_notify_payment_email(order_number, email):
