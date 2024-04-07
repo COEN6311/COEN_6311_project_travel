@@ -44,11 +44,11 @@ def get_model_and_serializer(type_param):
 
 
 def get_model_by_item_type(item_type):
-    if item_type == 1:
+    if item_type == 1 or item_type == '1':
         return FlightTicket
-    elif item_type == 2:
+    elif item_type == 2 or item_type == '2':
         return Hotel
-    elif item_type == 3:
+    elif item_type == 3 or item_type == '3':
         return Activity
     else:
         # Raise an exception if the type is not expected
@@ -339,6 +339,7 @@ def trend_package(request):
         {"result": True, "message": "select trend packages successfully",
          "data": CustomPackageSerializer(trend_packages_details, many=True).data},
         status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

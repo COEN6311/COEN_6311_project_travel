@@ -10,6 +10,7 @@ from order.mq.mq_sender import auto_order_cancel_queue, auto_order_notify_paymen
 import logging
 
 from order.service.order_service import send_order_notify_payment_email
+from promotion.consumer.result_consumer import browse_notify_callback
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,8 @@ def start_consumer():
         # channel.queue_declare(queue=auto_order_cancel_queue)
         channel.basic_consume(queue=auto_order_cancel_queue, on_message_callback=expire_order_callback, auto_ack=True)
         channel.basic_consume(queue=auto_order_notify_payment_queue, on_message_callback=order_notify_payment_callback,
+                              auto_ack=True)
+        channel.basic_consume(queue='flink-result', on_message_callback=browse_notify_callback,
                               auto_ack=True)
         # channel.queue_declare(queue='queue2')
         #

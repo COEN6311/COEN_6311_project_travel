@@ -71,6 +71,17 @@ class PackageItem(BaseModel):
         unique_together = ('package', 'item_content_type', 'item_object_id', 'type', 'is_delete')
 
 
+class Rule(models.Model):
+    category = models.CharField(max_length=255, blank=True, null=True)
+    item_id = models.IntegerField(blank=True, null=True)
+    browse_times = models.IntegerField(default=5)
+    windows_time = models.IntegerField(default=300)
+    wait_time = models.IntegerField(default=600)
+
+    class Meta:
+        db_table = 'rule'
+
+
 def soft_delete_package_item(item_id, item_type):
     package_items = PackageItem.objects.filter(
         item_object_id=item_id,
