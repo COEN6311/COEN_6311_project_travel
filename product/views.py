@@ -19,7 +19,7 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
-from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity, soft_delete_package_item
+from .models import CustomPackage, PackageItem, FlightTicket, Hotel, User, Activity, soft_delete_package_item, Rule
 from .service.package_service import get_packages_with_items, refresh_redis_packages_with_items, \
     update_related_packages_price_by_item, get_customer_packages
 from .utils import get_item_detail
@@ -346,6 +346,33 @@ def trend_package(request):
 def record_action(request):
     print("12")
     return Response({"result": True, "message": "request success"})
+
+
+@api_view(['POST'])
+def promotion_setting(request):
+    try:
+        category = request.data.get('category')
+        item_id = request.data.get('item_id')
+        browse_times = request.data.get('browse_times')
+        windows_time = request.data.get('windows_time')
+        wait_time = request.data.get('wait')
+
+        new_rule = Rule(
+            category=category,
+            item_id=item_id,
+            browse_times=browse_times,
+            windows_time=windows_time,
+            wait_time=wait_time
+        )
+
+        # Save the new instance to the database
+        new_rule.save()
+
+        # Return a response indicating success
+        return Response({"result": True, "message": "save setting success"})
+    except Exception:
+        return Response({'result': False, 'errorMsg': 'save false', 'message': "", 'data': None},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

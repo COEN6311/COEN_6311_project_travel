@@ -8,6 +8,7 @@ from .views import ItemAPIView, view_user_packages
 urlpatterns = [
     path('item/<str:action>', ItemAPIView.as_view(), name='custom_api'),
     path('item', ItemAPIView.as_view(), name='view_custom_api'),
+    path('promote/setting', views.promotion_setting, name='promotion_setting'),
     path('record/action', views.record_action, name='record_action'),
     path('package/insert', views.add_package, name='add_package'),
     path('package/user', view_user_packages, name='view_user_packages'),
