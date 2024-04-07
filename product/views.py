@@ -11,6 +11,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from cart.cart_service import delete_cart_item
 from order.models import UserOrder
+from promotion.etl import process_browse_data, async_process_browse_data
 from user.customPermission import IsAgentPermission
 from utils.constant import user_create_package_name
 from .serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
@@ -177,7 +178,8 @@ class ItemAPIView(APIView):
             return Response(
                 {'result': False, 'errorMsg': f'Object with ID {obj_id} does not exist for Type {type_param}.',
                  'message': "", 'data': None}, status=status.HTTP_404_NOT_FOUND)
-
+        if request.user.id is not None:
+            async_process_browse_data(obj, type_param, request.user.id)
         serializer = serializer_class(obj, context={'request': request})
         return Response(
             {"result": True, "message": "Data fetched successfully", "data": serializer.data, "errorMsg": ""},
@@ -337,6 +339,12 @@ def trend_package(request):
         {"result": True, "message": "select trend packages successfully",
          "data": CustomPackageSerializer(trend_packages_details, many=True).data},
         status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def record_action(request):
+    print("12")
+    return Response({"result": True, "message": "request success"})
 
 
 @api_view(['POST'])

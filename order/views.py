@@ -21,6 +21,7 @@ from order.service.order_service import handle_payment, calculate_prices, send_o
     get_order_status_by_date_span
 from product.models import CustomPackage
 from product.serializers import CustomPackageSerializer
+from promotion.etl import async_order_payment_data
 from user.models import User
 from utils.constant import user_create_package_name
 from utils.number_util import generate_random_number, calculate_price_taxed
@@ -178,6 +179,7 @@ def place_order(request):
             json_string = json.dumps(data)
             send_auto_order_cancel(json_string)
             send_auto_order_notify_payment(json_string)
+            async_order_payment_data(package_items, request.user.id)
             logger.info("generate and order,order_number:" + user_order_number)
         return JsonResponse(
             {'result': True, 'data': {
