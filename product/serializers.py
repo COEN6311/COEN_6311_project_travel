@@ -3,7 +3,7 @@ import time
 
 from django.core.cache import cache
 from rest_framework import serializers
-from .models import FlightTicket, Hotel, PackageItem, CustomPackage, Activity, Item
+from .models import FlightTicket, Hotel, PackageItem, CustomPackage, Activity, Item, Rule
 from .utils import detail_cache
 
 SERIALIZER_TYPE_MAP = {
@@ -220,3 +220,9 @@ class CustomPackageSerializer(serializers.ModelSerializer):
 
     def get_createAt(self, obj):
         return obj.create_time.date().strftime("%Y-%m-%d")
+
+
+class RuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rule
+        fields = '__all__'

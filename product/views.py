@@ -14,7 +14,8 @@ from order.models import UserOrder
 from promotion.etl import process_browse_data, async_process_browse_data
 from user.customPermission import IsAgentPermission
 from utils.constant import user_create_package_name
-from .serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer
+from .serializers import FlightTicketSerializer, HotelSerializer, CustomPackageSerializer, ActivitySerializer, \
+    RuleSerializer
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
@@ -355,7 +356,7 @@ def promotion_setting(request):
         item_id = request.data.get('item_id')
         browse_times = request.data.get('browse_times')
         windows_time = request.data.get('windows_time')
-        wait_time = request.data.get('wait')
+        wait_time = request.data.get('wait_time')
 
         new_rule = Rule(
             category=category,
@@ -373,6 +374,60 @@ def promotion_setting(request):
     except Exception:
         return Response({'result': False, 'errorMsg': 'save false', 'message': "", 'data': None},
                         status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def promotion_update(request):
+    try:
+        # Retrieve data from the request
+        id = request.data.get('id')
+        browse_times = request.data.get('browse_times')
+        windows_time = request.data.get('windows_time')
+        wait_time = request.data.get('wait_time')
+        # Get the corresponding Rule instance
+        rule = Rule.objects.get(id=id)
+        # Update fields based on provided data
+        if browse_times is not None:
+            rule.browse_times = browse_times
+        if windows_time is not None:
+            rule.windows_time = windows_time
+        if wait_time is not None:
+            rule.wait_time = wait_time
+
+        # Save the updates
+        rule.save()
+
+        # Return a success response
+        return JsonResponse({"message": "Promotion updated successfully"}, status=200)
+
+    except Rule.DoesNotExist:
+        # If the Rule instance is not found, return an error response
+        return JsonResponse({"error": "Rule not found"}, status=404)
+    except Exception as e:
+        # Catch other errors
+        return JsonResponse({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+def promotion_query(request):
+    try:
+        category = request.query_params.get('type')
+        item_id = request.query_params.get('id')
+        try:
+            rule_instance = Rule.objects.get(item_id=item_id, category=category)
+            data = RuleSerializer(rule_instance).data
+        except ObjectDoesNotExist:
+            # If item is not found, set the data to 0 or any default value you want
+            data = {
+                "category": str(category),
+                "item_id": item_id,
+                "browse_times": 0,
+                "windows_time": 0,
+                "wait_time": 0
+            }
+        return Response({'result': True, 'errorMsg': 'query successfully', 'message': "", 'data': data},
+                    status=status.HTTP_200_OK)
+    except Exception as e:
+        # You can handle or log the exception as you prefer
+        return Response({'error': str(e)}, status=400)
 
 
 @api_view(['POST'])
