@@ -8,7 +8,7 @@ This guide provides instructions for setting up your Django development environm
 ### Creating a Virtual Environment 
 
 Create a virtual environment to isolate project dependencies:  
-
+ 
 - For Linux/macOS:
   ```bash
   /usr/local/bin/python3.12 -m venv venv
