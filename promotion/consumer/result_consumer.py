@@ -67,7 +67,7 @@ def send_browse_notify_notify_email_with_fatigue_control(item_name, item_price, 
     send_custom_email(subject, message, [user_instance.email])
     redis_client.incr(redis_user_key)
     set_expiry_at_midnight(redis_user_key)
-    set_expiry_at_midnight(redis_user_rule_key)
+    redis_client.incr(redis_user_rule_key)
     set_expiry_at_midnight(redis_user_rule_key)
 
 
