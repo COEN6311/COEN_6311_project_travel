@@ -110,10 +110,13 @@ class ItemAPIView(APIView):
             model, _ = get_model_and_serializer(type_param)
             obj = model.objects.filter(id=obj_id).first()
             if obj:
+                package_items = PackageItem.objects.filter(
+                    Q(item_object_id=obj_id) & Q(type=type_param)
+                )
                 with transaction.atomic():
+                    update_related_packages_price_by_item(obj, True)
                     obj.soft_delete()  # soft delete
                     soft_delete_package_item(obj_id, type_param)
-                    update_related_packages_price_by_item(obj)
                     delete_cart_item(obj_id, type_param)
                 refresh_redis_packages_with_items()
                 return Response({'result': True, 'message': 'Object soft-deleted successfully'}, status=204)
@@ -139,7 +142,7 @@ class ItemAPIView(APIView):
                         Q(item_object_id=obj_id) & Q(type=type_param)
                     )
                     updated_detail = get_item_detail(type_param, obj)
-                    update_related_packages_price_by_item(obj)
+                    update_related_packages_price_by_item(obj, False)
                     batch_size = 100
                     for i in range(0, len(package_items), batch_size):
                         with transaction.atomic():
@@ -375,6 +378,7 @@ def promotion_setting(request):
         return Response({'result': False, 'errorMsg': 'save false', 'message': "", 'data': None},
                         status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['POST'])
 def promotion_update(request):
     try:
@@ -406,6 +410,7 @@ def promotion_update(request):
         # Catch other errors
         return JsonResponse({"error": str(e)}, status=500)
 
+
 @api_view(['GET'])
 def promotion_query(request):
     try:
@@ -424,7 +429,7 @@ def promotion_query(request):
                 "wait_time": 0
             }
         return Response({'result': True, 'errorMsg': 'query successfully', 'message': "", 'data': data},
-                    status=status.HTTP_200_OK)
+                        status=status.HTTP_200_OK)
     except Exception as e:
         # You can handle or log the exception as you prefer
         return Response({'error': str(e)}, status=400)

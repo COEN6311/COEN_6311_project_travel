@@ -72,7 +72,8 @@ def get_packages_with_items(user):
     return response_data
 
 
-def update_related_packages_price_by_item(item):
+# If `flag` is True, then the current Item's price should be excluded.
+def update_related_packages_price_by_item(item, flag):
     custom_packages = CustomPackage.objects.filter(packageitem__item_object_id=item.id).distinct()
     for custom_package in custom_packages:
         # Get all package items related to the current custom package
@@ -82,10 +83,12 @@ def update_related_packages_price_by_item(item):
         # Iterate through each package item for the current custom package
         for package_item in package_items_query:
             # Get the associated item for the current package item
-            item = package_item.item
+            item_in_package = package_item.item
             # If the associated item exists and has a price, add it to the total price
-            if item and item.price:
-                total_price += item.price
+            if item_in_package and item_in_package.price:
+                if flag is True and item_in_package == item:
+                    continue
+                total_price += item_in_package.price
         # Update the total price of the current custom package
         custom_package.price = total_price
         custom_package.save()
