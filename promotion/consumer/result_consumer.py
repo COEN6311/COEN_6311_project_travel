@@ -31,7 +31,7 @@ def browse_notify_callback(ch, method, properties, body):
             item_instance = model.objects.get(id=rule_instance.item_id)
             item_name = item_instance.name
             item_price = item_instance.price
-            send_browse_notify_notify_email_with_fatigue_control(item_name, item_price, user_instance)
+            send_browse_notify_notify_email_with_fatigue_control(item_name, item_price, user_instance, rule_id)
         except ObjectDoesNotExist:
             # 如果没有找到对应的条目，处理异常
             logger.info(f"No Rule found with id {rule_id}")
@@ -42,15 +42,23 @@ def browse_notify_callback(ch, method, properties, body):
         logger.error(f"An error occurred: {e}")
 
 
-def send_browse_notify_notify_email_with_fatigue_control(item_name, item_price, user_instance):
+def send_browse_notify_notify_email_with_fatigue_control(item_name, item_price, user_instance, rule_id):
     user_id = user_instance.id
     redis_user_key = user_redis_pre + str(user_id)
-    fatigue_value = redis_client.get(redis_user_key)
-    if fatigue_value is not None:
-        # Convert fatigue_value from bytes to int before comparison
-        fatigue_value = int(fatigue_value)
-        if fatigue_value >= 3:
+    redis_user_rule_key = user_redis_pre + str(user_id) + str(rule_id)
+    fatigue_user_value = redis_client.get(redis_user_key)
+    fatigue_user_rule_value = redis_client.get(redis_user_rule_key)
+    if fatigue_user_value is not None:
+        # Convert fatigue_user_value from bytes to int before comparison
+        fatigue_user_value = int(fatigue_user_value)
+        if fatigue_user_value >= 3:
             logger.info(f"send email too much, userId: {user_id}")
+            return
+    if fatigue_user_rule_value is not None:
+        # Convert fatigue_user_value from bytes to int before comparison
+        fatigue_user_rule_value = int(fatigue_user_rule_value)
+        if fatigue_user_value >= 1:
+            logger.info(f"the rule email too much, userId: {user_id}, ruleId:{rule_id}")
             return
     subject = "CONCORDIA TRAVEL:The product awaits your purchase"
     # send email notification
@@ -59,6 +67,8 @@ def send_browse_notify_notify_email_with_fatigue_control(item_name, item_price, 
     send_custom_email(subject, message, [user_instance.email])
     redis_client.incr(redis_user_key)
     set_expiry_at_midnight(redis_user_key)
+    set_expiry_at_midnight(fatigue_user_value)
+    set_expiry_at_midnight(fatigue_user_value)
 
 
 def set_expiry_at_midnight(redis_key):
